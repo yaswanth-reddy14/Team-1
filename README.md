@@ -1,5 +1,5 @@
 
-Civix — Vite + Tailwind registration (fixed)
+_**Civix : Civic Issue Reporting and Tracking App**_
 ===========================================
 
 Quick start (exact commands):
