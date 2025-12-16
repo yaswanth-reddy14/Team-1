@@ -21,7 +21,7 @@ export default function Navbar() {
             <NavLink to="/dashboard" className={navLinkClass}>
               Dashboard
             </NavLink>
-            <NavLink to="/report" className={navLinkClass}>
+            <NavLink to="/report-issue" className={navLinkClass}>
               Report Issue
             </NavLink>
             <NavLink to="/complaints" className={navLinkClass}>

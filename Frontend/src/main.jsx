@@ -6,8 +6,10 @@ import Login from "./pages/login.jsx";
 import Register from "./pages/Register.jsx";
 import Profile from "./pages/Profile.jsx";
 import Dashboard from './pages/Dashboard.jsx';
+import ReportIssue from './pages/ReportIssue.jsx';
 import { Toaster } from "react-hot-toast";
 import "./index.css";
+import "leaflet/dist/leaflet.css"
 
 ReactDOM.createRoot(document.getElementById('app')).render(
   <React.StrictMode>
@@ -20,6 +22,7 @@ ReactDOM.createRoot(document.getElementById('app')).render(
         <Route path="/register" element={<Register />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/report-issue" element={<ReportIssue />} />
       </Routes>
     </BrowserRouter>
   </React.StrictMode>
