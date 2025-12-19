@@ -6,6 +6,9 @@ import mongoose from "mongoose";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import User from "./models/User.js";
+import issueRoutes from './routes/issues.js';
+import authRoutes from './routes/auth.js';
+
 
 dotenv.config();
 const app = express();
@@ -270,6 +273,11 @@ app.delete("/api/auth/delete", verifyToken, async (req, res) => {
     return res.status(500).json({ message: "Server error" });
   }
 });
+/**
+ * Issue routes (Report Issue)
+ * Protected by verifyToken
+ */
+app.use('/api/issues', verifyToken, issueRoutes);
 
 // start server
 app.listen(PORT, () => console.log(`Auth server running on http://localhost:${PORT}`));

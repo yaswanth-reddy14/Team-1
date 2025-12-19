@@ -11,7 +11,7 @@ import L from 'leaflet';
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
 import markerShadow from 'leaflet/dist/images/marker-shadow.png';
-
+import toast from 'react-hot-toast';
 // Fix missing Leaflet marker icons (use local assets)
 delete L.Icon.Default.prototype._getIconUrl;
 
@@ -63,6 +63,50 @@ export default function ReportIssue() {
    const handleSubmit = async (e) => {
       e.preventDefault();
 
+      const token = localStorage.getItem('token');
+
+       if (!token) {
+    toast.error('Please login again');
+    return;
+  }
+  const title = e.target.title.value.trim();
+  const address = e.target.address.value.trim();
+  const description = e.target.description.value.trim();
+
+   // FRONTEND VALIDATION
+  if (!title) {
+    toast.error('Issue title is required');
+    return;
+  }
+
+  if (priority === 'Select Priority') {
+    toast.error('Please select priority');
+    return;
+  }
+
+  if (issueType === 'Select Issue Type') {
+    toast.error('Please select issue type');
+    return;
+  }
+
+  if (!address) {
+    toast.error('Address is required');
+    return;
+  }
+
+
+  if (!location) {
+    toast.error('Please select location on map');
+    return;
+  }
+
+  if (images.length === 0) {
+    toast.error('Please upload at least one image');
+    return;
+  }
+
+
+
      const formData = new FormData();
      formData.append('title', e.target.title.value);
      formData.append('priority', priority);
@@ -76,19 +120,28 @@ export default function ReportIssue() {
       });
       //submit form data to backend
       try {
+        const loadingToast = toast.loading('Submitting issue...');
         const res= await axios.post(
-          'http://localhost:4000/api/issues/create',formData,{
+          'http://localhost:4000/api/issues/create',
+          formData,
+          {
             headers: {
               'Content-Type': 'multipart/form-data',
+              Authorization: `Bearer ${token}`,
             },
           }
         );
-        alert('Issue reported successfully!');
+        toast.dismiss(loadingToast);
+        toast.success('Issue reported successfully!');
+        
         console.log(res.data);
+        
       }
       catch (err) {
         console.error(err);
-        alert('Error reporting issue. Please try again.');
+        toast.success();
+
+        toast.error('Error reporting issue. Please try again.');
       }
 
    };

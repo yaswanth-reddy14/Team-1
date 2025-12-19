@@ -1,9 +1,21 @@
 import { useState, useRef, useEffect } from 'react';
-import { FaChevronDown } from 'react-icons/fa'; // Ensure you have react-icons installed
+import { FaChevronDown } from 'react-icons/fa';
+
+const priorityColors = {
+  Low: 'text-green-700',
+  Medium: 'text-yellow-700',
+  High: ' text-red-700',
+};
 
 export default function CustomSelect({ label, value, onChange, options }) {
   const [isOpen, setIsOpen] = useState(false);
   const ref = useRef(null);
+
+  // detect if this select is Priority
+  const isPrioritySelect =
+    options.includes('Low') &&
+    options.includes('Medium') &&
+    options.includes('High');
 
   // Close dropdown if clicking outside
   useEffect(() => {
@@ -18,33 +30,42 @@ export default function CustomSelect({ label, value, onChange, options }) {
 
   return (
     <div className="relative" ref={ref}>
-      <label className="block mb-1 text-sm text-gray-700 font-medium">{label}</label>
+      {label && (
+        <label className="block mb-1 text-sm text-gray-700 font-medium">
+          {label}
+        </label>
+      )}
 
-      {/* The "Box" users click */}
+      {/* Select box */}
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className={`w-full flex items-center justify-between border-2 p-3 rounded-2xl bg-white backdrop-blur-sm transition-all duration-200
+        className={`w-full flex items-center justify-between border-2 p-3 rounded-2xl transition-all duration-200
           ${
             isOpen
               ? 'border-cyan-400 ring-2 ring-cyan-100'
               : 'border-black hover:border-cyan-300'
           }
+          ${
+            isPrioritySelect && priorityColors[value]
+              ? priorityColors[value]
+              : 'bg-white text-gray-800'
+          }
         `}
       >
-        <span className="text-gray-800">{value}</span>
+        <span>{value}</span>
         <FaChevronDown
-          className={`text-gray-400 text-sm transition-transform duration-200 ${
+          className={`text-sm transition-transform duration-200 ${
             isOpen ? 'rotate-180' : ''
           }`}
         />
       </button>
 
-      {/* The Dropdown List */}
+      {/* Dropdown */}
       {isOpen && (
-        <div className="absolute z-50 w-full mt-2 bg-white/90 backdrop-blur-xl border rounded-xl shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-100 origin-top">
+        <div className="absolute z-50 w-full mt-2 bg-white border rounded-xl shadow-xl overflow-hidden">
           <ul className="py-1">
-            {options.map(option => (
+            {options.map((option) => (
               <li
                 key={option}
                 onClick={() => {
@@ -53,7 +74,9 @@ export default function CustomSelect({ label, value, onChange, options }) {
                 }}
                 className={`px-4 py-3 cursor-pointer text-sm transition-colors
                   ${
-                    value === option
+                    isPrioritySelect && priorityColors[option]
+                      ? `${priorityColors[option]} hover:opacity-90`
+                      : value === option
                       ? 'bg-cyan-50 text-cyan-700 font-semibold'
                       : 'text-gray-600 hover:bg-cyan-50 hover:text-cyan-600'
                   }

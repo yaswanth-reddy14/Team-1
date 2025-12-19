@@ -24,7 +24,7 @@ export default function Navbar() {
             <NavLink to="/report-issue" className={navLinkClass}>
               Report Issue
             </NavLink>
-            <NavLink to="/complaints" className={navLinkClass}>
+            <NavLink to="/community-report" className={navLinkClass}>
               View Complaints
             </NavLink>
             <NavLink to="/profile" className={navLinkClass}>
