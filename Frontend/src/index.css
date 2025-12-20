@@ -272,3 +272,13 @@ select::-ms-expand { display: none; }
 .custom-scrollbar::-webkit-scrollbar-track {
   background: transparent;
 }
+
+/* Hide Scrollbar */
+.no-scrollbar ::-webkit-scrollbar {
+      display: none;
+    }
+
+    .no-scrollbar{
+      -ms-overflow-style: none;  /* IE and Edge */
+      scrollbar-width: none;  
+    } 

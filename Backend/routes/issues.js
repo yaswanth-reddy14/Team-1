@@ -48,7 +48,6 @@ router.post(
       console.error('Create issue error:', error);
       return res.status(500).json({ message: 'Failed to create issue' });
     }
-  }
-);
+  });
 
 export default router;

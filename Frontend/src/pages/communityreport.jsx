@@ -2,11 +2,14 @@ import React, { useState, useEffect, useRef } from 'react';
 import AuroraBackground from '../components/AuroraBackground';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
+import '../index.css';
 
 const communityreport = () => {
   const [statusFilter, setStatusFilter] = useState('All Status');
   const [typeFilter, setTypeFilter] = useState('All Types');
   const revealRefs = useRef([]);
+  const [showModal, setShowModal] = useState(false);
+  const [selectedReport, setSelectedReport] = useState(null);
 
   const reports = [
     {
@@ -19,7 +22,10 @@ const communityreport = () => {
       time: 'in 1 day',
       upvotes: 1,
       comments: 0,
-      status: 'Received'
+      status: 'Received',
+      priority: 'High',
+      issueType: 'Infrastructure',
+      image: '/pothole.jpg'
     },
     {
       id: 2,
@@ -31,7 +37,9 @@ const communityreport = () => {
       time: 'in 1 day',
       upvotes: 1,
       comments: 0,
-      status: 'Received'
+      status: 'Received', 
+      priority: 'Medium',
+      issueType: 'Infrastructure'
     },
     {
       id: 3,
@@ -43,7 +51,9 @@ const communityreport = () => {
       time: 'in 1 day',
       upvotes: 1,
       comments: 0,
-      status: 'Received'
+      status: 'In Progress',
+      priority: 'High',
+      issueType: 'sanitation'
     },
     {
       id: 4,
@@ -55,7 +65,9 @@ const communityreport = () => {
       time: 'in 1 day',
       upvotes: 0,
       comments: 0,
-      status: 'Received'
+      status: 'Received',
+      priority: 'Medium',
+      issueType: 'Sanitation'
     }
   ];
 
@@ -187,12 +199,155 @@ const communityreport = () => {
                     <span>Comments ({report.comments})</span>
                   </button>
                 </div>
+                  <button onClick={() =>{
+                    setSelectedReport(report);
+                    setShowModal(true);
+                    }}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition-all shadow-md">
+                    View Details
+                  </button>
               </div>
             ))}
           </div>
-        </main>
 
-        <Footer />
+  {/* Detailed Report Popup modal */}
+
+     {selectedReport && (
+     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
+
+       {/* Popup Card */}
+      <div className="bg-gradient-to-br from-sky-100 to-blue-100 w-[85%] max-w-4xl max-h-[90vh] overflow-y-auto no-scrollbar rounded-2xl shadow-xl relative flex flex-col">
+
+      {/* Close Button */}
+      <button aria-label="Close"
+        onClick={() => setSelectedReport(null)}
+        className="absolute top-4 right-4 text-gray-500 hover:text-black text-xl"
+      >
+        ✕
+      </button>
+
+      {/* HEADER */}
+      <div className="px-6 pt-6 pb-4 shrink-0">
+        <h2 className="text-2xl font-bold">{selectedReport.title}</h2>
+
+        <div className="flex items-center gap-3 mt-2 text-sm text-gray-500">
+          <span>⏱ Reported {selectedReport.time}</span>
+          <span className="px-3 py-1 rounded-full bg-blue-100 text-blue-700 text-xs font-medium">
+            {selectedReport.status}
+          </span>
+        </div>
+      </div>
+
+      {/* BODY */}
+      <div className="flex-1 px-6 pb-6">
+        <div className="flex flex-col md:flex-row gap-6 h-full">
+          <div className="w-full md:w-[60%] flex flex-col gap-4 overflow-y-auto pr-2">
+
+            {/* Image */}
+            <img
+              src={selectedReport.image}
+              alt="complaint"
+              className="w-full h-48 md:h-40 object-cover rounded-xl"
+            />
+
+            {/* Details */}
+            <div className="bg-white p-4 rounded-lg text-sm space-y-1">
+              <h3 className="font-semibold mb-1">Details</h3>
+              <p><b>📍 Location:</b> {selectedReport.location}</p>
+              <p><b>⏱ Reported:</b> {selectedReport.time}</p>
+              <p><b>📌 Priority:</b> {selectedReport.priority}</p>
+              <p><b>⚠️ Issue Type:</b> {selectedReport.issueType}</p>
+            </div>
+
+            {/* Description */}
+            <div className="bg-white p-4 rounded-lg text-sm flex flex-col flex-1">
+              <h3 className="font-semibold mb-1">Description</h3>
+              <p className="text-gray-700 leading-relaxed flex-1">
+                {selectedReport.description}
+              </p>
+            </div>
+          </div>
+
+          {/* RIGHT – 40%  */}
+      <div className="w-full md:w-[40%] flex flex-col gap-4">
+
+            {/* PROGRESS */}
+        <div className="bg-white p-4 rounded-lg">
+              <h3 className="font-semibold mb-4 text-center">Progress</h3>
+          <div className="relative flex items-center justify-between px-6">
+                {[
+                  { label: "Received", color: "bg-blue-500" },
+                  { label: "In Progress", color: "bg-yellow-500" },
+                  { label: "Resolved", color: "bg-green-500" }
+                ].map((step, index, arr) => {
+                  const activeIndex = ["Received", "In Progress", "Resolved"].indexOf(
+                    selectedReport.status
+                  );    
+                  return (
+            <div key={step.label} className="relative flex-1 flex flex-col items-center">
+        
+                {/* Connecting line (except last) */}
+                  {index < arr.length - 1 && (
+              <div
+                    className={`absolute top-4 left-1/2 h-1 w-full ${
+                    index < activeIndex ? arr[index + 1].color : "bg-sky-200"
+                    }`}
+                  />
+                )}
+
+                      {/* Circle */}
+                        <div  
+                            className={`z-10 w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold text-white ${
+                            index <= activeIndex ? step.color : "bg-sky-200 text-gray-500"
+                         }`}
+                        >
+                          {index + 1}
+                        </div>
+
+                      {/* Label */}
+                         <div className="mt-2 text-xs text-center whitespace-nowrap">
+                            {step.label}
+                         </div>
+                  </div>
+                  );
+              })}
+            </div>
+         </div>
+
+        {/* DISCUSSION */}
+        <div className="bg-white p-4 rounded-lg flex flex-col flex-1">
+          <h3 className="font-semibold mb-3">
+            Discussion ({selectedReport.comments})
+          </h3>
+
+          <div className="flex-1 text-sm text-gray-500">
+            No comments yet. Be the first to comment!
+          </div>
+
+          <textarea
+            placeholder="Add your comment..."
+            className="text-sm mt-3 resize-none focus:outline-none 
+                       w-full border-2 p-3 rounded-2xl input-glow hover:border-cyan-200 
+                       focus:border-cyan-400 
+                      focus: ring-cyan-100 outline-none transition"
+            rows={3}
+          />
+
+            <button className="mt-2 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700">
+                Post
+            </button>
+          </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
+
+ </main>
+
+       <Footer />
       </div>
     </>
   );
