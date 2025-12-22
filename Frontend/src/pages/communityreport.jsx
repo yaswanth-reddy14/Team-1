@@ -4,6 +4,8 @@ import AuroraBackground from '../components/AuroraBackground';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import StatusProgressBar from '../components/StatusProgressBar';
+import CustomSelect from '../components/CustomSelect';
+
 import {
   FaMapMarkerAlt,
   FaClock,
@@ -20,7 +22,6 @@ import { MapContainer, TileLayer, Marker } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 
-// Fix Leaflet icons once
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
@@ -28,7 +29,6 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 });
 
-// Constants outside component to prevent recreation
 const BACKEND = 'http://localhost:4000';
 
 const ISSUE_TYPE_META = {
@@ -45,12 +45,13 @@ const PRIORITY_STYLES = {
   High: { bg: 'bg-red-100', text: 'text-red-700', border: 'border-red-300' },
 };
 
-// Delete Confirmation Modal Component
+const PRIORITY_OPTIONS = ['Low', 'Medium', 'High'];
+
 const DeleteConfirmModal = ({ isOpen, onClose, onConfirm, title }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-[60] p-4">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-[9999] p-4">
       <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 animate-in fade-in zoom-in duration-200">
         <div className="flex items-center gap-3 mb-4">
           <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
@@ -85,7 +86,6 @@ const DeleteConfirmModal = ({ isOpen, onClose, onConfirm, title }) => {
   );
 };
 
-// Memoized Report Card Component
 const ReportCard = React.memo(({ report, userId, onViewDetails, onVote, isLoading }) => {
   const issueMeta = ISSUE_TYPE_META[report.issueType] || ISSUE_TYPE_META.Other;
   const priorityStyle = PRIORITY_STYLES[report.priority] || PRIORITY_STYLES.Low;
@@ -194,8 +194,15 @@ export default function CommunityReports() {
   const [userRole, setUserRole] = useState(null);
   const [votingLoading, setVotingLoading] = useState({});
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editForm, setEditForm] = useState({
+    title: '',
+    description: '',
+    priority: '',
+    issueType: '',
+    address: '',
+  });
 
-  // Fetch user
   useEffect(() => {
     const loadUser = async () => {
       const token = localStorage.getItem('token');
@@ -221,7 +228,6 @@ export default function CommunityReports() {
     loadUser();
   }, []);
 
-  // Fetch reports
   useEffect(() => {
     const loadReports = async () => {
       try {
@@ -239,7 +245,6 @@ export default function CommunityReports() {
     loadReports();
   }, []);
 
-  // Fetch comments when report selected
   useEffect(() => {
     if (!selectedReport?._id) return;
 
@@ -260,7 +265,18 @@ export default function CommunityReports() {
     loadComments();
   }, [selectedReport?._id]);
 
-  // Status update handler
+  useEffect(() => {
+    if (!isEditing || !selectedReport) return;
+
+    setEditForm({
+      title: selectedReport.title,
+      description: selectedReport.description,
+      priority: selectedReport.priority,
+      issueType: selectedReport.issueType,
+      address: selectedReport.address,
+    });
+  }, [isEditing, selectedReport]);
+
   const handleStatusUpdate = useCallback(
     async newStatus => {
       if (userRole !== 'Admin') return;
@@ -292,8 +308,30 @@ export default function CommunityReports() {
     },
     [selectedReport, userRole]
   );
+  const handleEditSave = async () => {
+    const res = await fetch(`${BACKEND}/api/issues/${selectedReport._id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${localStorage.getItem('token')}`,
+      },
+      body: JSON.stringify(editForm),
+    });
 
-  // Add comment handler
+    if (!res.ok) {
+      toast.error('Failed to update complaint');
+      return;
+    }
+
+    const updated = await res.json();
+
+    setReports(prev => prev.map(r => (r._id === updated.data._id ? updated.data : r)));
+
+    setSelectedReport(updated.data);
+    setIsEditing(false);
+    toast.success('Complaint updated');
+  };
+
   const addComment = useCallback(async () => {
     if (!newComment.trim()) {
       toast.error('Comment cannot be empty');
@@ -326,7 +364,6 @@ export default function CommunityReports() {
     }
   }, [newComment, selectedReport]);
 
-  // Vote handler
   const handleVote = useCallback(
     async (reportId, voteType) => {
       if (!userId) {
@@ -370,7 +407,6 @@ export default function CommunityReports() {
     [userId, votingLoading, selectedReport]
   );
 
-  // Delete handler
   const confirmDelete = useCallback(async () => {
     setShowDeleteModal(false);
     const toastId = toast.loading('Deleting complaint...');
@@ -394,11 +430,9 @@ export default function CommunityReports() {
     }
   }, [selectedReport]);
 
-  // Computed values
-  const canDelete = useMemo(
-    () => selectedReport && (userRole === 'Admin' || selectedReport.createdBy?._id === userId),
-    [selectedReport, userRole, userId]
-  );
+  const canEdit = selectedReport && selectedReport.createdBy?._id === userId;
+
+  const canDelete = selectedReport && selectedReport.createdBy?._id === userId;
 
   const isUpvoted = useMemo(
     () =>
@@ -437,7 +471,7 @@ export default function CommunityReports() {
         </div>
       </main>
 
-      {/* Delete Confirmation Modal */}
+
       <DeleteConfirmModal
         isOpen={showDeleteModal}
         onClose={() => setShowDeleteModal(false)}
@@ -445,22 +479,98 @@ export default function CommunityReports() {
         title={selectedReport?.title}
       />
 
-      {/* Details Modal */}
+
       {selectedReport && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex justify-center items-center z-50 p-2 md:p-4">
           <div className="bg-white w-full max-w-6xl rounded-lg md:rounded-xl overflow-hidden flex flex-col shadow-2xl max-h-[95vh] md:max-h-[90vh]">
-            {/* Header */}
+
             <div className="flex justify-between items-center p-3 md:p-4 border-b bg-white shrink-0">
-              <h2 className="text-lg md:text-xl font-bold truncate pr-4">{selectedReport.title}</h2>
-              <div className="flex items-center gap-2 shrink-0">
-                {canDelete && (
-                  <button
-                    onClick={() => setShowDeleteModal(true)}
-                    className="px-2 py-1 md:px-3 md:py-1 rounded-md bg-red-600 text-white text-xs md:text-sm font-semibold hover:bg-red-700"
-                  >
-                    Delete
-                  </button>
+              <div className="flex flex-col gap-2 mb-2">
+                {isEditing ? (
+                  <div className="flex flex-col gap-4">
+                    <label>Edit Title</label>
+                    <input
+                      value={editForm.title}
+                      onChange={e => setEditForm({ ...editForm, title: e.target.value })}
+                      className="text-lg md:text-xl font-bold border-b-3 border-blue-400  focus:outline-none"
+                    />
+                  </div>
+                ) : (
+                  <h2 className="text-lg md:text-xl font-bold truncate pr-4">
+                    {selectedReport.title}
+                  </h2>
                 )}
+
+                {isEditing ? (
+                  <div className="flex flex-col gap-2">
+                    <label>Edit Priority</label>
+                    <CustomSelect
+                      options={PRIORITY_OPTIONS}
+                      value={editForm.priority}
+                      onChange={value => setEditForm(prev => ({ ...prev, priority: value }))}
+                    />
+                  </div>
+                ) : (
+                  <span
+                    className={`inline-block w-fit px-3 py-1 text-xs rounded-full font-semibold
+        ${PRIORITY_STYLES[selectedReport.priority]?.bg}
+        ${PRIORITY_STYLES[selectedReport.priority]?.text}
+        ${PRIORITY_STYLES[selectedReport.priority]?.border}
+      `}
+                  >
+                    {selectedReport.priority}
+                  </span>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                {isEditing ? (
+                  <>
+                    <button
+                      onClick={handleEditSave}
+                      className="px-3 py-1 md:px-4 md:py-1.5 rounded-md bg-green-600 text-white text-xs md:text-sm font-semibold hover:bg-green-700"
+                    >
+                      Save
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setIsEditing(false);
+                        setEditForm({
+                          title: selectedReport.title,
+                          description: selectedReport.description,
+                          priority: selectedReport.priority,
+                          issueType: selectedReport.issueType,
+                          address: selectedReport.address,
+                        });
+                      }}
+                      className="px-3 py-1 md:px-4 md:py-1.5 rounded-md bg-gray-400 text-white text-xs md:text-sm font-semibold hover:bg-gray-500"
+                    >
+                      Cancel
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    {canEdit && (
+                      <button
+                        onClick={() => setIsEditing(true)}
+                        className="px-3 py-1 md:px-4 md:py-1.5 rounded-md bg-blue-600 text-white text-xs md:text-sm font-semibold hover:bg-blue-700"
+                      >
+                        Edit
+                      </button>
+                    )}
+
+                    {canDelete && (
+                      <button
+                        onClick={() => setShowDeleteModal(true)}
+                        className="px-3 py-1 md:px-4 md:py-1.5 rounded-md bg-red-600 text-white text-xs md:text-sm font-semibold hover:bg-red-700"
+                      >
+                        Delete
+                      </button>
+                    )}
+                  </>
+                )}
+
                 <button
                   onClick={() => setSelectedReport(null)}
                   className="p-1.5 md:p-2 hover:bg-gray-100 rounded-full"
@@ -470,12 +580,12 @@ export default function CommunityReports() {
               </div>
             </div>
 
-            {/* Content */}
+
             <div className="flex-1 overflow-y-auto p-3 md:p-6">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
-                {/* Left Column */}
+
                 <div className="space-y-4 md:space-y-6">
-                  {/* Progress */}
+
                   <div className="bg-gray-50 border border-gray-400 rounded-xl p-3 md:p-4">
                     <div className="flex justify-between items-center mb-3">
                       <h3 className="font-semibold text-sm md:text-base">Progress Status</h3>
@@ -487,7 +597,7 @@ export default function CommunityReports() {
                     </div>
                   </div>
 
-                  {/* Voting */}
+
                   <div className="flex gap-2 md:gap-4">
                     <button
                       onClick={() => handleVote(selectedReport._id, 'upvote')}
@@ -520,14 +630,26 @@ export default function CommunityReports() {
                     </button>
                   </div>
 
-                  {/* Description */}
+
                   <div className="bg-gray-50 p-3 rounded-lg border border-gray-400">
-                    <p className="text-sm md:text-base text-gray-700 leading-relaxed break-words">
-                      {selectedReport.description}
-                    </p>
+                    {isEditing ? (
+                      <div className="space-y-3">
+                        <label className="mb-2">Edit Description</label>
+                        <textarea
+                          value={editForm.description}
+                          onChange={e => setEditForm({ ...editForm, description: e.target.value })}
+                          className="w-full border-3 border-blue-400 p-2 rounded-lg"
+                          rows={4}
+                        />
+                      </div>
+                    ) : (
+                      <p className="text-sm md:text-base text-gray-700 leading-relaxed break-words">
+                        {selectedReport.description}
+                      </p>
+                    )}
                   </div>
 
-                  {/* Images */}
+
                   {selectedReport.images?.length > 0 && (
                     <div className="grid grid-cols-2 gap-2 md:gap-4">
                       {selectedReport.images.map((img, i) => (
@@ -543,9 +665,9 @@ export default function CommunityReports() {
                   )}
                 </div>
 
-                {/* Right Column */}
+
                 <div className="space-y-4 md:space-y-6">
-                  {/* Map */}
+
                   {selectedReport.location && (
                     <div className="rounded-xl overflow-hidden border border-gray-400 h-48 md:h-64 relative z-0">
                       <MapContainer
@@ -568,7 +690,7 @@ export default function CommunityReports() {
                     </div>
                   )}
 
-                  {/* Comments */}
+
                   <div className="bg-gray-50 rounded-xl p-3 md:p-4 border border-gray-400 flex flex-col h-64 md:h-auto">
                     <h3 className="font-semibold mb-2 md:mb-4 border-b pb-2 text-sm md:text-base">
                       Discussion

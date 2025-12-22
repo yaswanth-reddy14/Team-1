@@ -11,7 +11,6 @@ import L from 'leaflet';
 import toast from 'react-hot-toast';
 import { FaCheckCircle, FaHome, FaList } from 'react-icons/fa';
 
-// Leaflet Icon Fixes
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
 import markerShadow from 'leaflet/dist/images/marker-shadow.png';
@@ -22,8 +21,6 @@ L.Icon.Default.mergeOptions({
   iconUrl: markerIcon,
   shadowUrl: markerShadow,
 });
-
-// --- COMPONENTS ---
 
 const SuccessModal = ({ isOpen, onClose, onNavigateDashboard, onNavigateComplaints }) => {
   if (!isOpen) return null;
@@ -72,19 +69,15 @@ function LocationPicker({ setLocation }) {
   return null;
 }
 
-// --- MAIN PAGE ---
-
 export default function ReportIssue() {
   const navigate = useNavigate();
 
-  // Form States
   const [location, setLocation] = useState(null);
   const [images, setImages] = useState([]);
   const [priority, setPriority] = useState('Select Priority');
   const [issueType, setIssueType] = useState('Select Issue Type');
   const [showSuccessModal, setShowSuccessModal] = useState(false);
 
-  // Refs
   const fileInputRef = useRef(null);
   const formRef = useRef(null);
 
@@ -112,7 +105,6 @@ export default function ReportIssue() {
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  // --- FIXED HANDLESUBMIT ---
   const handleSubmit = async e => {
     e.preventDefault();
     const token = localStorage.getItem('token');
@@ -122,24 +114,20 @@ export default function ReportIssue() {
       return;
     }
 
-    // 1. Capture Values
     const title = e.target.title.value.trim();
     const address = e.target.address.value.trim();
     const description = e.target.description.value.trim();
 
-    // 2. VALIDATION (Returns early if invalid, preventing the loading toast)
     if (!title) return toast.error('Issue title is required');
     if (priority === 'Select Priority') return toast.error('Please select priority');
     if (issueType === 'Select Issue Type') return toast.error('Please select issue type');
     if (!address) return toast.error('Address is required');
 
-    // ** Added Description Check **
     if (!description) return toast.error('Please describe the issue');
 
     if (!location) return toast.error('Please select location on map');
     if (images.length === 0) return toast.error('Please upload at least one image');
 
-    // 3. Prepare Data
     const formData = new FormData();
     formData.append('title', title);
     formData.append('priority', priority);
@@ -149,11 +137,9 @@ export default function ReportIssue() {
     formData.append('location', JSON.stringify(location));
     images.forEach(img => formData.append('images', img));
 
-    // 4. API Call with Toast Management
     let loadingToastId;
 
     try {
-      // Start Loading Toast HERE (only if validation passed)
       loadingToastId = toast.loading('Submitting issue...');
 
       await axios.post('http://localhost:4000/api/issues/create', formData, {
@@ -163,14 +149,15 @@ export default function ReportIssue() {
         },
       });
 
-      // Success Cleanup
-      toast.dismiss(loadingToastId); // Dismiss the specific loading toast
+      toast.dismiss(loadingToastId);
+
       setShowSuccessModal(true);
       resetForm();
     } catch (err) {
       console.error(err);
-      // Error Cleanup
-      toast.dismiss(loadingToastId); // Dismiss the loading toast so it doesn't stick
+
+      toast.dismiss(loadingToastId);
+
       toast.error(err.response?.data?.message || 'Error reporting issue. Please try again.');
     }
   };
@@ -196,7 +183,6 @@ export default function ReportIssue() {
             onSubmit={handleSubmit}
             className="relative bg-white/80 rounded-3xl shadow-xl p-10 grid grid-cols-1 lg:grid-cols-2 gap-12 items-start"
           >
-            {/* Left Side */}
             <div className="space-y-5">
               <h2 className="text-xl font-semibold text-gray-700">Issue Details</h2>
 
@@ -271,7 +257,6 @@ export default function ReportIssue() {
               </div>
             </div>
 
-            {/* Right Side */}
             <div className="space-y-5">
               <h2 className="text-xl font-semibold text-gray-700">Description and Location</h2>
 
