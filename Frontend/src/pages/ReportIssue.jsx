@@ -162,6 +162,8 @@ export default function ReportIssue() {
     }
   };
 
+
+
   return (
     <div className="flex flex-col relative">
       <AuroraBackground />

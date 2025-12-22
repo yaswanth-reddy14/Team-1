@@ -192,6 +192,7 @@ export default function CommunityReports() {
   const [newComment, setNewComment] = useState('');
   const [userId, setUserId] = useState(null);
   const [userRole, setUserRole] = useState(null);
+  const [viewMode, setViewMode] = useState('all');
   const [votingLoading, setVotingLoading] = useState({});
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -450,15 +451,50 @@ export default function CommunityReports() {
     [selectedReport, userId]
   );
 
+    const filteredReports = useMemo(() => {
+      if (viewMode === 'mine') {
+        return reports.filter(r => r.createdBy?._id === userId);
+      }
+      return reports;
+    }, [reports, viewMode, userId]);
+
   return (
     <div>
       <AuroraBackground />
       <Navbar />
       <main className="max-w-7xl mx-auto px-4 py-10 relative">
-        <h2 className="text-3xl font-bold mb-8 px-6">Community Reports</h2>
+        <div className="flex items-center justify-between mb-8 px-6">
+          <h2 className="text-3xl font-bold">Community Reports</h2>
+
+          <div className="flex gap-2">
+            <button
+              onClick={() => setViewMode('all')}
+              className={`px-4 py-1.5 rounded-md text-sm font-semibold border
+        ${
+          viewMode === 'all'
+            ? 'bg-blue-600 text-white border-blue-700'
+            : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
+        }`}
+            >
+              All Reports
+            </button>
+
+            <button
+              onClick={() => setViewMode('mine')}
+              className={`px-4 py-1.5 rounded-md text-sm font-semibold border
+        ${
+          viewMode === 'mine'
+            ? 'bg-blue-600 text-white border-blue-700'
+            : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
+        }`}
+            >
+              My Reports
+            </button>
+          </div>
+        </div>
 
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 px-6">
-          {reports.map(report => (
+          {filteredReports.map(report => (
             <ReportCard
               key={report._id}
               report={report}
@@ -471,7 +507,6 @@ export default function CommunityReports() {
         </div>
       </main>
 
-
       <DeleteConfirmModal
         isOpen={showDeleteModal}
         onClose={() => setShowDeleteModal(false)}
@@ -479,11 +514,9 @@ export default function CommunityReports() {
         title={selectedReport?.title}
       />
 
-
       {selectedReport && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex justify-center items-center z-50 p-2 md:p-4">
           <div className="bg-white w-full max-w-6xl rounded-lg md:rounded-xl overflow-hidden flex flex-col shadow-2xl max-h-[95vh] md:max-h-[90vh]">
-
             <div className="flex justify-between items-center p-3 md:p-4 border-b bg-white shrink-0">
               <div className="flex flex-col gap-2 mb-2">
                 {isEditing ? (
@@ -580,12 +613,9 @@ export default function CommunityReports() {
               </div>
             </div>
 
-
             <div className="flex-1 overflow-y-auto p-3 md:p-6">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
-
                 <div className="space-y-4 md:space-y-6">
-
                   <div className="bg-gray-50 border border-gray-400 rounded-xl p-3 md:p-4">
                     <div className="flex justify-between items-center mb-3">
                       <h3 className="font-semibold text-sm md:text-base">Progress Status</h3>
@@ -596,7 +626,6 @@ export default function CommunityReports() {
                       />
                     </div>
                   </div>
-
 
                   <div className="flex gap-2 md:gap-4">
                     <button
@@ -630,7 +659,6 @@ export default function CommunityReports() {
                     </button>
                   </div>
 
-
                   <div className="bg-gray-50 p-3 rounded-lg border border-gray-400">
                     {isEditing ? (
                       <div className="space-y-3">
@@ -649,7 +677,6 @@ export default function CommunityReports() {
                     )}
                   </div>
 
-
                   {selectedReport.images?.length > 0 && (
                     <div className="grid grid-cols-2 gap-2 md:gap-4">
                       {selectedReport.images.map((img, i) => (
@@ -665,9 +692,7 @@ export default function CommunityReports() {
                   )}
                 </div>
 
-
                 <div className="space-y-4 md:space-y-6">
-
                   {selectedReport.location && (
                     <div className="rounded-xl overflow-hidden border border-gray-400 h-48 md:h-64 relative z-0">
                       <MapContainer
@@ -689,7 +714,6 @@ export default function CommunityReports() {
                       </MapContainer>
                     </div>
                   )}
-
 
                   <div className="bg-gray-50 rounded-xl p-3 md:p-4 border border-gray-400 flex flex-col h-64 md:h-auto">
                     <h3 className="font-semibold mb-2 md:mb-4 border-b pb-2 text-sm md:text-base">
