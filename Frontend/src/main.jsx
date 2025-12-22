@@ -7,7 +7,7 @@ import Register from "./pages/Register.jsx";
 import Profile from "./pages/Profile.jsx";
 import Dashboard from './pages/Dashboard.jsx';
 import ReportIssue from './pages/ReportIssue.jsx';
-import CommunityReports from './pages/communityreport.jsx';
+import CommunityReports from './pages/CommunityReport.jsx';
 import { Toaster } from "react-hot-toast";
 import "./index.css";
 import "leaflet/dist/leaflet.css"

@@ -1,6 +1,6 @@
 export default function Footer() {
   return (
-    <footer className="bg-slate-900 text-slate-300 pt-10 pb-8">
+    <footer className="relative bottom-0 w-full bg-slate-900 text-slate-300 pt-10 pb-8 ">
       <div className="max-w-6xl mx-auto px-6 grid grid-cols-1 md:grid-cols-3 gap-6">
         <div>
           <h4 className="font-semibold mb-3 text-white">More About Company</h4>

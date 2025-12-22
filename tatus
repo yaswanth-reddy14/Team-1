@@ -1,0 +1,24 @@
+* [33m51bc65d[m[33m ([m[1;31morigin/master[m[33m, [m[1;31morigin/HEAD[m[33m)[m Added Detailed Report Popup Modal
+* [33md7a8948[m Added community reports page and backend of report issue page
+* [33mf5201bd[m Adding ReportIssue Form Frontend
+* [33m4feeeac[m Profile pic remove button fixed
+* [33m98fa3fb[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmaster[m[33m)[m Dashboard added
+* [33mdaf3b07[m Ignore node_modules and build files
+* [33m9ec6ac2[m role removed from sigin page
+* [33ma335e83[m[33m ([m[1;31morigin/main[m[33m)[m Delete README.md
+* [33m1aa1dbc[m Delete Backend directory
+* [33m63e8da5[m Delete Frontend directory
+* [33m436d561[m Update project title in README.md
+* [33mf75904e[m Revise README for Civix project setup
+* [33mfe278a7[m Add files via upload
+* [33m44e0b3b[m Initialize package.json for Frontend project
+* [33m6eb7778[m Add initial HTML structure for Civix Registration
+* [33mef0c016[m Create styles.css
+* [33m6170026[m Initialize main.js and import styles and Register page
+* [33mba4f742[m Implement registration form with validation
+* [33m612a6a1[m temp files creation in each folder
+* [33m04dabc1[m Delete temp files in each folder
+* [33mffc1523[m Create Backend folder
+* [33mf3a166d[m Create folder
+* [33m3046575[m Update project title in README
+* [33mf1c059b[m Initial commit

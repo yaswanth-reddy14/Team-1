@@ -228,6 +228,8 @@ app.put("/api/auth/update", verifyToken, async (req, res) => {
   }
 });
 
+
+
 /**
  * PUT /api/auth/change-password
  * Body: { currentPassword, newPassword }

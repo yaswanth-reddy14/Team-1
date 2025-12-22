@@ -1,356 +1,622 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import toast from 'react-hot-toast';
 import AuroraBackground from '../components/AuroraBackground';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
-import '../index.css';
+import StatusProgressBar from '../components/StatusProgressBar';
+import {
+  FaMapMarkerAlt,
+  FaClock,
+  FaTimes,
+  FaTrash,
+  FaThumbsUp,
+  FaThumbsDown,
+  FaRoad,
+  FaTint,
+  FaLightbulb,
+  FaExclamationTriangle,
+} from 'react-icons/fa';
+import { MapContainer, TileLayer, Marker } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
+import L from 'leaflet';
 
-const communityreport = () => {
-  const [statusFilter, setStatusFilter] = useState('All Status');
-  const [typeFilter, setTypeFilter] = useState('All Types');
-  const revealRefs = useRef([]);
-  const [showModal, setShowModal] = useState(false);
-  const [selectedReport, setSelectedReport] = useState(null);
+// Fix Leaflet icons once
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+});
 
-  const reports = [
-    {
-      id: 1,
-      icon: '🚗',
-      iconBg: 'bg-gray-100',
-      title: 'Large pothole on Main Street causing traffic delays',
-      description: "There's a massive pothole on Main Street near the intersection with Oak Avenue. It's been there for weeks and is causing serious damage to vehicles. Multiple cars have gotten flat tires.",
-      location: 'Main Street & Oak Avenue',
-      time: 'in 1 day',
-      upvotes: 1,
-      comments: 0,
-      status: 'Received',
-      priority: 'High',
-      issueType: 'Infrastructure',
-      image: '/pothole.jpg'
-    },
-    {
-      id: 2,
-      icon: '💡',
-      iconBg: 'bg-yellow-50',
-      title: 'Broken streetlight in residential area',
-      description: "The streetlight at the corner of Pine Street and 2nd Avenue has been out for over a month. This creates a safety hazard for pedestrians at night.",
-      location: 'Pine Street & 2nd Avenue',
-      time: 'in 1 day',
-      upvotes: 1,
-      comments: 0,
-      status: 'Received', 
-      priority: 'Medium',
-      issueType: 'Infrastructure'
-    },
-    {
-      id: 3,
-      icon: '🗑️',
-      iconBg: 'bg-gray-100',
-      title: 'Illegal garbage dump behind shopping center',
-      description: "Someone has been dumping large amounts of trash behind the Westfield Shopping Center. It's attracting rats and creating an unsanitary environment.",
-      location: 'Westfield Shopping Center, Back Parking Lot',
-      time: 'in 1 day',
-      upvotes: 1,
-      comments: 0,
-      status: 'In Progress',
-      priority: 'High',
-      issueType: 'sanitation'
-    },
-    {
-      id: 4,
-      icon: '💧',
-      iconBg: 'bg-blue-50',
-      title: 'Water leak flooding sidewalk on Elm Street',
-      description: "There's a water main leak that's been flooding the sidewalk on Elm Street for the past 3 days. The water is starting to undermine the pavement.",
-      location: 'Elm Street between 5th and 6th Ave',
-      time: 'in 1 day',
-      upvotes: 0,
-      comments: 0,
-      status: 'Received',
-      priority: 'Medium',
-      issueType: 'Sanitation'
-    }
-  ];
+// Constants outside component to prevent recreation
+const BACKEND = 'http://localhost:4000';
 
-  /* ---------- Scroll Animation ---------- */
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      entries => {
-        entries.forEach(entry => {
-          if (entry.isIntersecting) {
-            entry.target.classList.add('opacity-100', 'translate-y-0');
-          }
-        });
-      },
-      { threshold: 0.1 }
-    );
+const ISSUE_TYPE_META = {
+  Garbage: { icon: FaTrash, color: 'text-green-600', bg: 'bg-green-100' },
+  'Road Damage': { icon: FaRoad, color: 'text-gray-700', bg: 'bg-gray-200' },
+  'Water Leakage': { icon: FaTint, color: 'text-blue-600', bg: 'bg-blue-100' },
+  'Street Light': { icon: FaLightbulb, color: 'text-yellow-600', bg: 'bg-yellow-100' },
+  Other: { icon: FaExclamationTriangle, color: 'text-red-600', bg: 'bg-red-100' },
+};
 
-    revealRefs.current.forEach(el => el && observer.observe(el));
-    return () => observer.disconnect();
-  }, []);
+const PRIORITY_STYLES = {
+  Low: { bg: 'bg-green-100', text: 'text-green-700', border: 'border-green-300' },
+  Medium: { bg: 'bg-yellow-100', text: 'text-yellow-700', border: 'border-yellow-300' },
+  High: { bg: 'bg-red-100', text: 'text-red-700', border: 'border-red-300' },
+};
+
+// Delete Confirmation Modal Component
+const DeleteConfirmModal = ({ isOpen, onClose, onConfirm, title }) => {
+  if (!isOpen) return null;
 
   return (
-    <>
-      <AuroraBackground />
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-[60] p-4">
+      <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 animate-in fade-in zoom-in duration-200">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
+            <FaTrash className="text-red-600 text-xl" />
+          </div>
+          <div>
+            <h3 className="text-lg font-bold text-gray-900">Delete Complaint</h3>
+            <p className="text-sm text-gray-500">This action cannot be undone</p>
+          </div>
+        </div>
 
-      <div className="min-h-screen relative">
-        <Navbar />
+        <p className="text-gray-700 mb-6">
+          Are you sure you want to delete "<span className="font-semibold">{title}</span>"?
+        </p>
 
-        <main className="max-w-7xl mx-auto px-4 py-10">
-          {/* Header */}
-          <div
-            ref={el => (revealRefs.current[0] = el)}
-            className="mb-10 opacity-0 translate-y-6 transition-all duration-700"
+        <div className="flex gap-3 justify-end">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 font-medium hover:bg-gray-50 transition-colors"
           >
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-3xl font-bold text-gray-900">Community Reports</h2>
-                <p className="text-gray-600">View and track community issues</p>
-              </div>
-              
-              <div className="flex gap-4">
-                <select 
-                  className="px-4 py-2 border border-gray-300 rounded-xl bg-white/80 backdrop-blur-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer shadow-sm hover:shadow-md transition-all"
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                >
-                  <option>All Status</option>
-                  <option>Received</option>
-                  <option>In Progress</option>
-                  <option>Resolved</option>
-                </select>
-                
-                <select 
-                  className="px-4 py-2 border border-gray-300 rounded-xl bg-white/80 backdrop-blur-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer shadow-sm hover:shadow-md transition-all"
-                  value={typeFilter}
-                  onChange={(e) => setTypeFilter(e.target.value)}
-                >
-                  <option>All Types</option>
-                  <option>Infrastructure</option>
-                  <option>Safety</option>
-                  <option>Sanitation</option>
-                </select>
-              </div>
-            </div>
-          </div>
-
-          {/* Reports Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {reports.map((report, index) => (
-              <div 
-                key={report.id}
-                ref={el => (revealRefs.current[index + 1] = el)}
-                className="bg-white/95 backdrop-blur-md rounded-2xl shadow-lg border border-gray-200 p-6 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 opacity-0 translate-y-6"
-              >
-                {/* Header */}
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex items-start gap-3 flex-1">
-                    <div className={`${report.iconBg} w-12 h-12 rounded-xl flex items-center justify-center text-2xl flex-shrink-0 shadow-sm`}>
-                      {report.icon}
-                    </div>
-                    <h3 className="font-bold text-gray-900 flex-1 leading-tight text-lg">{report.title}</h3>
-                  </div>
-                  <span className="px-4 py-1.5 bg-blue-500 text-white text-sm font-semibold rounded-full whitespace-nowrap ml-3 flex-shrink-0 shadow-sm">
-                    {report.status}
-                  </span>
-                </div>
-
-                {/* Description */}
-                <p className="text-gray-600 text-sm mb-5 leading-relaxed">
-                  {report.description}
-                </p>
-
-                {/* Meta Information */}
-                <div className="flex items-center justify-between text-sm text-gray-500 mb-5 bg-gray-50 rounded-lg p-3">
-                  <div className="flex items-center gap-2">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                    <span className="font-medium">{report.location}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <span className="font-medium">{report.time}</span>
-                  </div>
-                </div>
-
-                {/* Actions */}
-                <div className="flex items-center justify-between pt-4 border-t border-gray-200">
-                  <div className="flex items-center gap-4">
-                    <button className="flex items-center gap-2 text-gray-600 hover:text-blue-600 transition-all hover:scale-110 active:scale-95">
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5" />
-                      </svg>
-                      <span className="text-sm font-semibold">{report.upvotes}</span>
-                    </button>
-                    <button className="flex items-center gap-2 text-gray-600 hover:text-blue-600 transition-all hover:scale-110 active:scale-95">
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-                      </svg>
-                      <span className="text-sm font-semibold">{report.comments}</span>
-                    </button>
-                  </div>
-                  <button className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-blue-500 hover:text-white text-gray-700 rounded-lg transition-all font-semibold text-sm hover:shadow-md active:scale-95">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-                    </svg>
-                    <span>Comments ({report.comments})</span>
-                  </button>
-                </div>
-                  <button onClick={() =>{
-                    setSelectedReport(report);
-                    setShowModal(true);
-                    }}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition-all shadow-md">
-                    View Details
-                  </button>
-              </div>
-            ))}
-          </div>
-
-  {/* Detailed Report Popup modal */}
-
-     {selectedReport && (
-     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
-
-       {/* Popup Card */}
-      <div className="bg-gradient-to-br from-sky-100 to-blue-100 w-[85%] max-w-4xl max-h-[90vh] overflow-y-auto no-scrollbar rounded-2xl shadow-xl relative flex flex-col">
-
-      {/* Close Button */}
-      <button aria-label="Close"
-        onClick={() => setSelectedReport(null)}
-        className="absolute top-4 right-4 text-gray-500 hover:text-black text-xl"
-      >
-        ✕
-      </button>
-
-      {/* HEADER */}
-      <div className="px-6 pt-6 pb-4 shrink-0">
-        <h2 className="text-2xl font-bold">{selectedReport.title}</h2>
-
-        <div className="flex items-center gap-3 mt-2 text-sm text-gray-500">
-          <span>⏱ Reported {selectedReport.time}</span>
-          <span className="px-3 py-1 rounded-full bg-blue-100 text-blue-700 text-xs font-medium">
-            {selectedReport.status}
-          </span>
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            className="px-4 py-2 rounded-lg bg-red-600 text-white font-medium hover:bg-red-700 transition-colors"
+          >
+            Delete
+          </button>
         </div>
       </div>
+    </div>
+  );
+};
 
-      {/* BODY */}
-      <div className="flex-1 px-6 pb-6">
-        <div className="flex flex-col md:flex-row gap-6 h-full">
-          <div className="w-full md:w-[60%] flex flex-col gap-4 overflow-y-auto pr-2">
+// Memoized Report Card Component
+const ReportCard = React.memo(({ report, userId, onViewDetails, onVote, isLoading }) => {
+  const issueMeta = ISSUE_TYPE_META[report.issueType] || ISSUE_TYPE_META.Other;
+  const priorityStyle = PRIORITY_STYLES[report.priority] || PRIORITY_STYLES.Low;
+  const IssueIcon = issueMeta.icon;
 
-            {/* Image */}
-            <img
-              src={selectedReport.image}
-              alt="complaint"
-              className="w-full h-48 md:h-40 object-cover rounded-xl"
-            />
+  const isUpvoted = useMemo(
+    () => Array.isArray(report.upvotes) && report.upvotes.includes(userId),
+    [report.upvotes, userId]
+  );
 
-            {/* Details */}
-            <div className="bg-white p-4 rounded-lg text-sm space-y-1">
-              <h3 className="font-semibold mb-1">Details</h3>
-              <p><b>📍 Location:</b> {selectedReport.location}</p>
-              <p><b>⏱ Reported:</b> {selectedReport.time}</p>
-              <p><b>📌 Priority:</b> {selectedReport.priority}</p>
-              <p><b>⚠️ Issue Type:</b> {selectedReport.issueType}</p>
-            </div>
+  const isDownvoted = useMemo(
+    () => Array.isArray(report.downvotes) && report.downvotes.includes(userId),
+    [report.downvotes, userId]
+  );
 
-            {/* Description */}
-            <div className="bg-white p-4 rounded-lg text-sm flex flex-col flex-1">
-              <h3 className="font-semibold mb-1">Description</h3>
-              <p className="text-gray-700 leading-relaxed flex-1">
-                {selectedReport.description}
-              </p>
-            </div>
+  const upvoteCount = Array.isArray(report.upvotes) ? report.upvotes.length : 0;
+  const downvoteCount = Array.isArray(report.downvotes) ? report.downvotes.length : 0;
+
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm hover:shadow-md transition-shadow flex flex-col h-full">
+      <div className="flex justify-between items-center mb-3">
+        <div className="flex gap-4 items-center">
+          <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${issueMeta.bg}`}>
+            <IssueIcon className={`text-xl ${issueMeta.color}`} />
           </div>
+          <h3 className="font-semibold text-lg">{report.title}</h3>
+        </div>
+        <span
+          className={`px-3 py-1 text-xs rounded-full font-semibold ${priorityStyle.bg} ${priorityStyle.text}`}
+        >
+          {report.priority}
+        </span>
+      </div>
 
-          {/* RIGHT – 40%  */}
-      <div className="w-full md:w-[40%] flex flex-col gap-4">
+      <p className="text-gray-600 text-sm line-clamp-3 break-words">{report.description}</p>
 
-            {/* PROGRESS */}
-        <div className="bg-white p-4 rounded-lg">
-              <h3 className="font-semibold mb-4 text-center">Progress</h3>
-          <div className="relative flex items-center justify-between px-6">
-                {[
-                  { label: "Received", color: "bg-blue-500" },
-                  { label: "In Progress", color: "bg-yellow-500" },
-                  { label: "Resolved", color: "bg-green-500" }
-                ].map((step, index, arr) => {
-                  const activeIndex = ["Received", "In Progress", "Resolved"].indexOf(
-                    selectedReport.status
-                  );    
-                  return (
-            <div key={step.label} className="relative flex-1 flex flex-col items-center">
-        
-                {/* Connecting line (except last) */}
-                  {index < arr.length - 1 && (
-              <div
-                    className={`absolute top-4 left-1/2 h-1 w-full ${
-                    index < activeIndex ? arr[index + 1].color : "bg-sky-200"
-                    }`}
-                  />
-                )}
-
-                      {/* Circle */}
-                        <div  
-                            className={`z-10 w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold text-white ${
-                            index <= activeIndex ? step.color : "bg-sky-200 text-gray-500"
-                         }`}
-                        >
-                          {index + 1}
-                        </div>
-
-                      {/* Label */}
-                         <div className="mt-2 text-xs text-center whitespace-nowrap">
-                            {step.label}
-                         </div>
-                  </div>
-                  );
-              })}
-            </div>
-         </div>
-
-        {/* DISCUSSION */}
-        <div className="bg-white p-4 rounded-lg flex flex-col flex-1">
-          <h3 className="font-semibold mb-3">
-            Discussion ({selectedReport.comments})
-          </h3>
-
-          <div className="flex-1 text-sm text-gray-500">
-            No comments yet. Be the first to comment!
+      <div className="pt-4 mt-auto">
+        <div className="flex flex-wrap gap-4 justify-between text-sm text-gray-500 mb-3">
+          <div className="flex items-center gap-1">
+            <FaMapMarkerAlt />
+            <span className="truncate max-w-[10rem] sm:max-w-[14rem] md:max-w-[18rem]">
+              {report.address}
+            </span>
           </div>
+          <div className="flex items-center gap-1">
+            <FaClock />
+            {new Date(report.createdAt).toLocaleDateString()}
+          </div>
+        </div>
 
-          <textarea
-            placeholder="Add your comment..."
-            className="text-sm mt-3 resize-none focus:outline-none 
-                       w-full border-2 p-3 rounded-2xl input-glow hover:border-cyan-200 
-                       focus:border-cyan-400 
-                      focus: ring-cyan-100 outline-none transition"
-            rows={3}
-          />
+        <div className="border-t pt-3 flex justify-between items-center">
+          <button
+            onClick={() => onViewDetails(report)}
+            className="text-sm font-medium text-blue-600 hover:underline"
+          >
+            View Details
+          </button>
 
-            <button className="mt-2 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700">
-                Post
+          <div className="flex gap-2 ml-auto">
+            <button
+              onClick={() => onVote(report._id, 'upvote')}
+              disabled={isLoading}
+              className={`flex items-center gap-2 px-3 py-1 rounded-full text-sm font-bold transition-colors border
+                ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}
+                ${
+                  isUpvoted
+                    ? 'bg-green-600 text-white border-green-700'
+                    : 'bg-white text-gray-600 border-gray-300 hover:bg-green-50 hover:text-green-600'
+                }
+              `}
+            >
+              <FaThumbsUp />
+              {upvoteCount}
             </button>
-          </div>
 
+            <button
+              onClick={() => onVote(report._id, 'downvote')}
+              disabled={isLoading}
+              className={`flex items-center gap-2 px-3 py-1 rounded-full text-sm font-bold transition-colors border
+                ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}
+                ${
+                  isDownvoted
+                    ? 'bg-red-600 text-white border-red-700'
+                    : 'bg-white text-gray-600 border-gray-300 hover:bg-red-50 hover:text-red-600'
+                }
+              `}
+            >
+              <FaThumbsDown />
+              {downvoteCount}
+            </button>
           </div>
         </div>
       </div>
     </div>
-  </div>
-)}
-
- </main>
-
-       <Footer />
-      </div>
-    </>
   );
-};
+});
 
-export default communityreport
+ReportCard.displayName = 'ReportCard';
+
+export default function CommunityReports() {
+  const [reports, setReports] = useState([]);
+  const [selectedReport, setSelectedReport] = useState(null);
+  const [comments, setComments] = useState([]);
+  const [newComment, setNewComment] = useState('');
+  const [userId, setUserId] = useState(null);
+  const [userRole, setUserRole] = useState(null);
+  const [votingLoading, setVotingLoading] = useState({});
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+
+  // Fetch user
+  useEffect(() => {
+    const loadUser = async () => {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      try {
+        const res = await fetch(`${BACKEND}/api/auth/me`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (res.ok) {
+          const { user } = await res.json();
+          if (user?._id) {
+            setUserId(user._id);
+            setUserRole(user.role);
+          }
+        }
+      } catch (err) {
+        console.error('User fetch error:', err);
+        toast.error('Failed to load user information');
+      }
+    };
+    loadUser();
+  }, []);
+
+  // Fetch reports
+  useEffect(() => {
+    const loadReports = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const headers = token ? { Authorization: `Bearer ${token}` } : {};
+
+        const res = await fetch(`${BACKEND}/api/issues`, { headers });
+        const data = await res.json();
+        setReports(Array.isArray(data.data) ? data.data : []);
+      } catch (err) {
+        console.error('Reports fetch error:', err);
+        toast.error('Failed to load reports');
+      }
+    };
+    loadReports();
+  }, []);
+
+  // Fetch comments when report selected
+  useEffect(() => {
+    if (!selectedReport?._id) return;
+
+    const loadComments = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const headers = token ? { Authorization: `Bearer ${token}` } : {};
+
+        const res = await fetch(`${BACKEND}/api/issues/${selectedReport._id}`, { headers });
+        const data = await res.json();
+        setComments(data.data?.comments || []);
+      } catch (err) {
+        console.error('Comments fetch error:', err);
+        toast.error('Failed to load comments');
+      }
+    };
+
+    loadComments();
+  }, [selectedReport?._id]);
+
+  // Status update handler
+  const handleStatusUpdate = useCallback(
+    async newStatus => {
+      if (userRole !== 'Admin') return;
+
+      const toastId = toast.loading('Updating status...');
+
+      try {
+        const res = await fetch(`${BACKEND}/api/issues/${selectedReport._id}/status`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${localStorage.getItem('token')}`,
+          },
+          body: JSON.stringify({ status: newStatus }),
+        });
+
+        if (res.ok) {
+          const updated = await res.json();
+          setSelectedReport(updated.data);
+          setReports(prev => prev.map(r => (r._id === selectedReport._id ? updated.data : r)));
+          toast.success('Status updated successfully', { id: toastId });
+        } else {
+          toast.error('Failed to update status', { id: toastId });
+        }
+      } catch (err) {
+        console.error('Status update error:', err);
+        toast.error('Failed to update status', { id: toastId });
+      }
+    },
+    [selectedReport, userRole]
+  );
+
+  // Add comment handler
+  const addComment = useCallback(async () => {
+    if (!newComment.trim()) {
+      toast.error('Comment cannot be empty');
+      return;
+    }
+
+    const toastId = toast.loading('Posting comment...');
+
+    try {
+      const res = await fetch(`${BACKEND}/api/issues/${selectedReport._id}/comment`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+        },
+        body: JSON.stringify({ text: newComment }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setComments(data.comments);
+        setNewComment('');
+        toast.success('Comment posted successfully', { id: toastId });
+      } else {
+        toast.error('Failed to post comment', { id: toastId });
+      }
+    } catch (err) {
+      console.error('Comment error:', err);
+      toast.error('Failed to post comment', { id: toastId });
+    }
+  }, [newComment, selectedReport]);
+
+  // Vote handler
+  const handleVote = useCallback(
+    async (reportId, voteType) => {
+      if (!userId) {
+        toast.error('Please login to vote');
+        return;
+      }
+      if (votingLoading[reportId]) return;
+
+      setVotingLoading(prev => ({ ...prev, [reportId]: true }));
+
+      try {
+        const res = await fetch(`${BACKEND}/api/issues/${reportId}/vote`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${localStorage.getItem('token')}`,
+          },
+          body: JSON.stringify({ voteType }),
+        });
+
+        if (!res.ok) {
+          toast.error('Failed to register vote');
+          return;
+        }
+
+        const updated = await res.json();
+        setReports(prev => prev.map(r => (r._id === reportId ? updated.data : r)));
+
+        if (selectedReport?._id === reportId) {
+          setSelectedReport(updated.data);
+        }
+
+        toast.success(voteType === 'upvote' ? 'Upvoted!' : 'Downvoted!');
+      } catch (err) {
+        console.error('Vote error:', err);
+        toast.error('Failed to register vote');
+      } finally {
+        setVotingLoading(prev => ({ ...prev, [reportId]: false }));
+      }
+    },
+    [userId, votingLoading, selectedReport]
+  );
+
+  // Delete handler
+  const confirmDelete = useCallback(async () => {
+    setShowDeleteModal(false);
+    const toastId = toast.loading('Deleting complaint...');
+
+    try {
+      const res = await fetch(`${BACKEND}/api/issues/${selectedReport._id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+      });
+
+      if (res.ok) {
+        setReports(prev => prev.filter(r => r._id !== selectedReport._id));
+        setSelectedReport(null);
+        toast.success('Complaint deleted successfully', { id: toastId });
+      } else {
+        toast.error('Failed to delete complaint', { id: toastId });
+      }
+    } catch (err) {
+      console.error('Delete error:', err);
+      toast.error('Failed to delete complaint', { id: toastId });
+    }
+  }, [selectedReport]);
+
+  // Computed values
+  const canDelete = useMemo(
+    () => selectedReport && (userRole === 'Admin' || selectedReport.createdBy?._id === userId),
+    [selectedReport, userRole, userId]
+  );
+
+  const isUpvoted = useMemo(
+    () =>
+      selectedReport &&
+      Array.isArray(selectedReport.upvotes) &&
+      selectedReport.upvotes.includes(userId),
+    [selectedReport, userId]
+  );
+
+  const isDownvoted = useMemo(
+    () =>
+      selectedReport &&
+      Array.isArray(selectedReport.downvotes) &&
+      selectedReport.downvotes.includes(userId),
+    [selectedReport, userId]
+  );
+
+  return (
+    <div>
+      <AuroraBackground />
+      <Navbar />
+      <main className="max-w-7xl mx-auto px-4 py-10 relative">
+        <h2 className="text-3xl font-bold mb-8 px-6">Community Reports</h2>
+
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 px-6">
+          {reports.map(report => (
+            <ReportCard
+              key={report._id}
+              report={report}
+              userId={userId}
+              onViewDetails={setSelectedReport}
+              onVote={handleVote}
+              isLoading={votingLoading[report._id]}
+            />
+          ))}
+        </div>
+      </main>
+
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={confirmDelete}
+        title={selectedReport?.title}
+      />
+
+      {/* Details Modal */}
+      {selectedReport && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex justify-center items-center z-50 p-2 md:p-4">
+          <div className="bg-white w-full max-w-6xl rounded-lg md:rounded-xl overflow-hidden flex flex-col shadow-2xl max-h-[95vh] md:max-h-[90vh]">
+            {/* Header */}
+            <div className="flex justify-between items-center p-3 md:p-4 border-b bg-white shrink-0">
+              <h2 className="text-lg md:text-xl font-bold truncate pr-4">{selectedReport.title}</h2>
+              <div className="flex items-center gap-2 shrink-0">
+                {canDelete && (
+                  <button
+                    onClick={() => setShowDeleteModal(true)}
+                    className="px-2 py-1 md:px-3 md:py-1 rounded-md bg-red-600 text-white text-xs md:text-sm font-semibold hover:bg-red-700"
+                  >
+                    Delete
+                  </button>
+                )}
+                <button
+                  onClick={() => setSelectedReport(null)}
+                  className="p-1.5 md:p-2 hover:bg-gray-100 rounded-full"
+                >
+                  <FaTimes className="text-gray-600 text-lg" />
+                </button>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto p-3 md:p-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+                {/* Left Column */}
+                <div className="space-y-4 md:space-y-6">
+                  {/* Progress */}
+                  <div className="bg-gray-50 border border-gray-400 rounded-xl p-3 md:p-4">
+                    <div className="flex justify-between items-center mb-3">
+                      <h3 className="font-semibold text-sm md:text-base">Progress Status</h3>
+                      <StatusProgressBar
+                        status={selectedReport.status}
+                        isAdmin={userRole === 'Admin'}
+                        onStatusChange={handleStatusUpdate}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Voting */}
+                  <div className="flex gap-2 md:gap-4">
+                    <button
+                      onClick={() => handleVote(selectedReport._id, 'upvote')}
+                      disabled={votingLoading[selectedReport._id]}
+                      className={`flex-1 flex justify-center gap-1 md:gap-2 items-center px-2 py-2 md:px-6 rounded-lg font-bold text-xs md:text-sm border border-gray-400
+                        ${votingLoading[selectedReport._id] ? 'opacity-50 cursor-not-allowed' : ''}
+                        ${
+                          isUpvoted
+                            ? 'bg-green-600 text-white border-green-700'
+                            : 'bg-white text-gray-700 hover:border-green-400 hover:text-green-600'
+                        }`}
+                    >
+                      <FaThumbsUp />
+                      <span>Up ({selectedReport.upvotes?.length || 0})</span>
+                    </button>
+
+                    <button
+                      onClick={() => handleVote(selectedReport._id, 'downvote')}
+                      disabled={votingLoading[selectedReport._id]}
+                      className={`flex-1 flex justify-center gap-1 md:gap-2 items-center px-2 py-2 md:px-6 rounded-lg font-bold text-xs md:text-sm border border-gray-400
+                        ${votingLoading[selectedReport._id] ? 'opacity-50 cursor-not-allowed' : ''}
+                        ${
+                          isDownvoted
+                            ? 'bg-red-600 text-white border-red-700'
+                            : 'bg-white text-gray-700 hover:border-red-400 hover:text-red-600'
+                        }`}
+                    >
+                      <FaThumbsDown />
+                      <span>Down ({selectedReport.downvotes?.length || 0})</span>
+                    </button>
+                  </div>
+
+                  {/* Description */}
+                  <div className="bg-gray-50 p-3 rounded-lg border border-gray-400">
+                    <p className="text-sm md:text-base text-gray-700 leading-relaxed break-words">
+                      {selectedReport.description}
+                    </p>
+                  </div>
+
+                  {/* Images */}
+                  {selectedReport.images?.length > 0 && (
+                    <div className="grid grid-cols-2 gap-2 md:gap-4">
+                      {selectedReport.images.map((img, i) => (
+                        <img
+                          key={i}
+                          src={img}
+                          className="h-32 md:h-48 w-full object-cover rounded-lg border border-gray-400"
+                          alt="Evidence"
+                          loading="lazy"
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Right Column */}
+                <div className="space-y-4 md:space-y-6">
+                  {/* Map */}
+                  {selectedReport.location && (
+                    <div className="rounded-xl overflow-hidden border border-gray-400 h-48 md:h-64 relative z-0">
+                      <MapContainer
+                        center={[
+                          Number(selectedReport.location.lat),
+                          Number(selectedReport.location.lng),
+                        ]}
+                        zoom={15}
+                        className="h-full w-full"
+                        scrollWheelZoom={false}
+                      >
+                        <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                        <Marker
+                          position={[
+                            Number(selectedReport.location.lat),
+                            Number(selectedReport.location.lng),
+                          ]}
+                        />
+                      </MapContainer>
+                    </div>
+                  )}
+
+                  {/* Comments */}
+                  <div className="bg-gray-50 rounded-xl p-3 md:p-4 border border-gray-400 flex flex-col h-64 md:h-auto">
+                    <h3 className="font-semibold mb-2 md:mb-4 border-b pb-2 text-sm md:text-base">
+                      Discussion
+                    </h3>
+
+                    <div className="flex-1 overflow-y-auto space-y-3 mb-3 pr-1 custom-scrollbar">
+                      {comments.length > 0 ? (
+                        comments.map(c => (
+                          <div
+                            key={c._id}
+                            className="bg-white p-2 md:p-3 rounded-lg border border-gray-400 text-xs md:text-sm break-words"
+                          >
+                            <div className="font-bold text-xs mb-0.5 text-blue-600">
+                              {c.user?.name || 'Anonymous'}
+                            </div>
+                            <p className="text-gray-700">{c.text}</p>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="h-full flex items-center justify-center">
+                          <p className="text-gray-400 text-xs md:text-sm italic">No comments yet</p>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex gap-2 w-full items-center">
+                      <input
+                        value={newComment}
+                        onChange={e => setNewComment(e.target.value)}
+                        onKeyPress={e => e.key === 'Enter' && addComment()}
+                        className="flex-1 min-w-0 border border-gray-400 p-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="Type a comment..."
+                      />
+                      <button
+                        onClick={addComment}
+                        className="shrink-0 bg-blue-600 hover:bg-blue-700 text-white px-3 md:px-4 py-2 rounded-lg text-sm font-semibold"
+                      >
+                        Send
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      <Footer />
+    </div>
+  );
+}
