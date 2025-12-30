@@ -74,7 +74,7 @@ export default function Landing() {
           aria-hidden="true"
         />
 
-        {/* content (glass card) */}
+
         <div className="relative z-10 max-w-6xl mx-auto h-full px-6 flex items-center justify-center">
           <div className="w-full ">
             <div className="bg-white/8 flex justify-center flex-col backdrop-blur-lg border border-white/20 rounded-2xl p-10 md:p-12 shadow-xl">

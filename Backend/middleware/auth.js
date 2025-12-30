@@ -12,10 +12,6 @@ export default function authMiddleware(req, res, next) {
     const token = auth.split(' ')[1];
     const payload = jwt.verify(token, process.env.JWT_SECRET);
 
-    console.log('Auth Middleware - Decoded JWT:', payload);
-
-    // Try different possible fields for user ID
-    // Your JWT seems to have 'sub' but auth middleware expects 'id'
     const userId = payload.id || payload.sub || payload.userId || payload._id;
 
     if (!userId) {
@@ -24,10 +20,7 @@ export default function authMiddleware(req, res, next) {
     }
 
     req.userId = userId;
-    req.user = payload; // Store the entire payload
-
-    console.log('Auth Middleware - Set req.userId to:', req.userId);
-
+    req.user = payload;
     next();
   } catch (err) {
     console.error('authMiddleware error', err);

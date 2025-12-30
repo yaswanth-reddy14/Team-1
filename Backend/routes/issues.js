@@ -332,15 +332,13 @@ router.put('/:id/progress', authMiddleware, async (req, res) => {
     const { progress } = req.body;
     const issueId = req.params.id;
 
-    // ✅ Only Admin can update progress
-    if (req.userRole !== 'Admin') {
+    if (req.userRole !== 'Admin' && req.userRole !== 'Volunteer') {
       return res.status(403).json({
         success: false,
-        message: 'Only Admin can update progress',
+        message: 'Only Admin or Volunteer can update progress',
       });
     }
 
-    // ✅ Validate progress value
     const allowedProgress = ['REPORTED', 'IN_PROGRESS', 'RESOLVED'];
     if (!allowedProgress.includes(progress)) {
       return res.status(400).json({

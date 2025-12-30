@@ -280,7 +280,10 @@ export default function CommunityReports() {
 
   const handleStatusUpdate = useCallback(
     async newStatus => {
-      if (userRole !== 'Admin') return;
+      if (userRole !== 'Admin' && userRole !== 'Volunteer') {
+        toast.error('You cannot edit the progress');
+        return;
+      }
 
       const toastId = toast.loading('Updating status...');
 
@@ -459,310 +462,314 @@ export default function CommunityReports() {
     }, [reports, viewMode, userId]);
 
   return (
-    <div>
-      <AuroraBackground />
-      <Navbar />
-      <main className="max-w-7xl mx-auto px-4 py-10 relative">
-        <div className="flex items-center justify-between mb-8 px-6">
-          <h2 className="text-3xl font-bold">Community Reports</h2>
+      <div>
+        <AuroraBackground />
+        <Navbar />
+        <main className="max-w-7xl mx-auto px-4 py-10 relative">
+          <div className="flex items-center justify-between mb-8 px-6">
+            <h2 className="text-3xl font-bold">Community Reports</h2>
 
-          <div className="flex gap-2">
-            <button
-              onClick={() => setViewMode('all')}
-              className={`px-4 py-1.5 rounded-md text-sm font-semibold border
+            <div className="flex gap-2">
+              <button
+                onClick={() => setViewMode('all')}
+                className={`px-4 py-1.5 rounded-md text-sm font-semibold border
         ${
           viewMode === 'all'
             ? 'bg-blue-600 text-white border-blue-700'
             : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
         }`}
-            >
-              All Reports
-            </button>
+              >
+                All Reports
+              </button>
 
-            <button
-              onClick={() => setViewMode('mine')}
-              className={`px-4 py-1.5 rounded-md text-sm font-semibold border
+              <button
+                onClick={() => setViewMode('mine')}
+                className={`px-4 py-1.5 rounded-md text-sm font-semibold border
         ${
           viewMode === 'mine'
             ? 'bg-blue-600 text-white border-blue-700'
             : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
         }`}
-            >
-              My Reports
-            </button>
+              >
+                My Reports
+              </button>
+            </div>
           </div>
-        </div>
 
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 px-6">
-          {filteredReports.map(report => (
-            <ReportCard
-              key={report._id}
-              report={report}
-              userId={userId}
-              onViewDetails={setSelectedReport}
-              onVote={handleVote}
-              isLoading={votingLoading[report._id]}
-            />
-          ))}
-        </div>
-      </main>
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 px-6">
+            {filteredReports.map(report => (
+              <ReportCard
+                key={report._id}
+                report={report}
+                userId={userId}
+                onViewDetails={setSelectedReport}
+                onVote={handleVote}
+                isLoading={votingLoading[report._id]}
+              />
+            ))}
+          </div>
+        </main>
 
-      <DeleteConfirmModal
-        isOpen={showDeleteModal}
-        onClose={() => setShowDeleteModal(false)}
-        onConfirm={confirmDelete}
-        title={selectedReport?.title}
-      />
+        <DeleteConfirmModal
+          isOpen={showDeleteModal}
+          onClose={() => setShowDeleteModal(false)}
+          onConfirm={confirmDelete}
+          title={selectedReport?.title}
+        />
 
-      {selectedReport && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex justify-center items-center z-50 p-2 md:p-4">
-          <div className="bg-white w-full max-w-6xl rounded-lg md:rounded-xl overflow-hidden flex flex-col shadow-2xl max-h-[95vh] md:max-h-[90vh]">
-            <div className="flex justify-between items-center p-3 md:p-4 border-b bg-white shrink-0">
-              <div className="flex flex-col gap-2 mb-2">
-                {isEditing ? (
-                  <div className="flex flex-col gap-4">
-                    <label>Edit Title</label>
-                    <input
-                      value={editForm.title}
-                      onChange={e => setEditForm({ ...editForm, title: e.target.value })}
-                      className="text-lg md:text-xl font-bold border-b-3 border-blue-400  focus:outline-none"
-                    />
-                  </div>
-                ) : (
-                  <h2 className="text-lg md:text-xl font-bold truncate pr-4">
-                    {selectedReport.title}
-                  </h2>
-                )}
+        {selectedReport && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex justify-center items-center z-50 p-2 md:p-4">
+            <div className="bg-white w-full max-w-6xl rounded-lg md:rounded-xl overflow-hidden flex flex-col shadow-2xl max-h-[95vh] md:max-h-[90vh]">
+              <div className="flex justify-between items-center p-3 md:p-4 border-b bg-white shrink-0">
+                <div className="flex flex-col gap-2 mb-2">
+                  {isEditing ? (
+                    <div className="flex flex-col gap-4">
+                      <label>Edit Title</label>
+                      <input
+                        value={editForm.title}
+                        onChange={e => setEditForm({ ...editForm, title: e.target.value })}
+                        className="text-lg md:text-xl font-bold border-b-3 border-blue-400  focus:outline-none"
+                      />
+                    </div>
+                  ) : (
+                    <h2 className="text-lg md:text-xl font-bold truncate pr-4">
+                      {selectedReport.title}
+                    </h2>
+                  )}
 
-                {isEditing ? (
-                  <div className="flex flex-col gap-2">
-                    <label>Edit Priority</label>
-                    <CustomSelect
-                      options={PRIORITY_OPTIONS}
-                      value={editForm.priority}
-                      onChange={value => setEditForm(prev => ({ ...prev, priority: value }))}
-                    />
-                  </div>
-                ) : (
-                  <span
-                    className={`inline-block w-fit px-3 py-1 text-xs rounded-full font-semibold
+                  {isEditing ? (
+                    <div className="flex flex-col gap-2">
+                      <label>Edit Priority</label>
+                      <CustomSelect
+                        options={PRIORITY_OPTIONS}
+                        value={editForm.priority}
+                        onChange={value => setEditForm(prev => ({ ...prev, priority: value }))}
+                      />
+                    </div>
+                  ) : (
+                    <span
+                      className={`inline-block w-fit px-3 py-1 text-xs rounded-full font-semibold
         ${PRIORITY_STYLES[selectedReport.priority]?.bg}
         ${PRIORITY_STYLES[selectedReport.priority]?.text}
         ${PRIORITY_STYLES[selectedReport.priority]?.border}
       `}
+                    >
+                      {selectedReport.priority}
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  {isEditing ? (
+                    <>
+                      <button
+                        onClick={handleEditSave}
+                        className="px-3 py-1 md:px-4 md:py-1.5 rounded-md bg-green-600 text-white text-xs md:text-sm font-semibold hover:bg-green-700"
+                      >
+                        Save
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          setIsEditing(false);
+                          setEditForm({
+                            title: selectedReport.title,
+                            description: selectedReport.description,
+                            priority: selectedReport.priority,
+                            issueType: selectedReport.issueType,
+                            address: selectedReport.address,
+                          });
+                        }}
+                        className="px-3 py-1 md:px-4 md:py-1.5 rounded-md bg-gray-400 text-white text-xs md:text-sm font-semibold hover:bg-gray-500"
+                      >
+                        Cancel
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      {canEdit && (
+                        <button
+                          onClick={() => setIsEditing(true)}
+                          className="px-3 py-1 md:px-4 md:py-1.5 rounded-md bg-blue-600 text-white text-xs md:text-sm font-semibold hover:bg-blue-700"
+                        >
+                          Edit
+                        </button>
+                      )}
+
+                      {canDelete && (
+                        <button
+                          onClick={() => setShowDeleteModal(true)}
+                          className="px-3 py-1 md:px-4 md:py-1.5 rounded-md bg-red-600 text-white text-xs md:text-sm font-semibold hover:bg-red-700"
+                        >
+                          Delete
+                        </button>
+                      )}
+                    </>
+                  )}
+
+                  <button
+                    onClick={() => setSelectedReport(null)}
+                    className="p-1.5 md:p-2 hover:bg-gray-100 rounded-full"
                   >
-                    {selectedReport.priority}
-                  </span>
-                )}
+                    <FaTimes className="text-gray-600 text-lg" />
+                  </button>
+                </div>
               </div>
 
-              <div className="flex items-center gap-2 shrink-0">
-                {isEditing ? (
-                  <>
-                    <button
-                      onClick={handleEditSave}
-                      className="px-3 py-1 md:px-4 md:py-1.5 rounded-md bg-green-600 text-white text-xs md:text-sm font-semibold hover:bg-green-700"
-                    >
-                      Save
-                    </button>
-
-                    <button
-                      onClick={() => {
-                        setIsEditing(false);
-                        setEditForm({
-                          title: selectedReport.title,
-                          description: selectedReport.description,
-                          priority: selectedReport.priority,
-                          issueType: selectedReport.issueType,
-                          address: selectedReport.address,
-                        });
-                      }}
-                      className="px-3 py-1 md:px-4 md:py-1.5 rounded-md bg-gray-400 text-white text-xs md:text-sm font-semibold hover:bg-gray-500"
-                    >
-                      Cancel
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    {canEdit && (
-                      <button
-                        onClick={() => setIsEditing(true)}
-                        className="px-3 py-1 md:px-4 md:py-1.5 rounded-md bg-blue-600 text-white text-xs md:text-sm font-semibold hover:bg-blue-700"
-                      >
-                        Edit
-                      </button>
-                    )}
-
-                    {canDelete && (
-                      <button
-                        onClick={() => setShowDeleteModal(true)}
-                        className="px-3 py-1 md:px-4 md:py-1.5 rounded-md bg-red-600 text-white text-xs md:text-sm font-semibold hover:bg-red-700"
-                      >
-                        Delete
-                      </button>
-                    )}
-                  </>
-                )}
-
-                <button
-                  onClick={() => setSelectedReport(null)}
-                  className="p-1.5 md:p-2 hover:bg-gray-100 rounded-full"
-                >
-                  <FaTimes className="text-gray-600 text-lg" />
-                </button>
-              </div>
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-3 md:p-6">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
-                <div className="space-y-4 md:space-y-6">
-                  <div className="bg-gray-50 border border-gray-400 rounded-xl p-3 md:p-4">
-                    <div className="flex justify-between items-center mb-3">
-                      <h3 className="font-semibold text-sm md:text-base">Progress Status</h3>
-                      <StatusProgressBar
-                        status={selectedReport.status}
-                        isAdmin={userRole === 'Admin'}
-                        onStatusChange={handleStatusUpdate}
-                      />
+              <div className="flex-1 overflow-y-auto p-3 md:p-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+                  <div className="space-y-4 md:space-y-6">
+                    <div className="bg-gray-50 border border-gray-400 rounded-xl p-3 md:p-4">
+                      <div className="flex justify-between items-center mb-3">
+                        <h3 className="font-semibold text-sm md:text-base">Progress Status</h3>
+                        <StatusProgressBar
+                          status={selectedReport.status}
+                          isAdmin={userRole === 'Admin' || userRole == 'Volunteer'}
+                          onStatusChange={handleStatusUpdate}
+                        />
+                      </div>
                     </div>
-                  </div>
 
-                  <div className="flex gap-2 md:gap-4">
-                    <button
-                      onClick={() => handleVote(selectedReport._id, 'upvote')}
-                      disabled={votingLoading[selectedReport._id]}
-                      className={`flex-1 flex justify-center gap-1 md:gap-2 items-center px-2 py-2 md:px-6 rounded-lg font-bold text-xs md:text-sm border border-gray-400
+                    <div className="flex gap-2 md:gap-4">
+                      <button
+                        onClick={() => handleVote(selectedReport._id, 'upvote')}
+                        disabled={votingLoading[selectedReport._id]}
+                        className={`flex-1 flex justify-center gap-1 md:gap-2 items-center px-2 py-2 md:px-6 rounded-lg font-bold text-xs md:text-sm border border-gray-400
                         ${votingLoading[selectedReport._id] ? 'opacity-50 cursor-not-allowed' : ''}
                         ${
                           isUpvoted
                             ? 'bg-green-600 text-white border-green-700'
                             : 'bg-white text-gray-700 hover:border-green-400 hover:text-green-600'
                         }`}
-                    >
-                      <FaThumbsUp />
-                      <span>Up ({selectedReport.upvotes?.length || 0})</span>
-                    </button>
+                      >
+                        <FaThumbsUp />
+                        <span>Up ({selectedReport.upvotes?.length || 0})</span>
+                      </button>
 
-                    <button
-                      onClick={() => handleVote(selectedReport._id, 'downvote')}
-                      disabled={votingLoading[selectedReport._id]}
-                      className={`flex-1 flex justify-center gap-1 md:gap-2 items-center px-2 py-2 md:px-6 rounded-lg font-bold text-xs md:text-sm border border-gray-400
+                      <button
+                        onClick={() => handleVote(selectedReport._id, 'downvote')}
+                        disabled={votingLoading[selectedReport._id]}
+                        className={`flex-1 flex justify-center gap-1 md:gap-2 items-center px-2 py-2 md:px-6 rounded-lg font-bold text-xs md:text-sm border border-gray-400
                         ${votingLoading[selectedReport._id] ? 'opacity-50 cursor-not-allowed' : ''}
                         ${
                           isDownvoted
                             ? 'bg-red-600 text-white border-red-700'
                             : 'bg-white text-gray-700 hover:border-red-400 hover:text-red-600'
                         }`}
-                    >
-                      <FaThumbsDown />
-                      <span>Down ({selectedReport.downvotes?.length || 0})</span>
-                    </button>
-                  </div>
-
-                  <div className="bg-gray-50 p-3 rounded-lg border border-gray-400">
-                    {isEditing ? (
-                      <div className="space-y-3">
-                        <label className="mb-2">Edit Description</label>
-                        <textarea
-                          value={editForm.description}
-                          onChange={e => setEditForm({ ...editForm, description: e.target.value })}
-                          className="w-full border-3 border-blue-400 p-2 rounded-lg"
-                          rows={4}
-                        />
-                      </div>
-                    ) : (
-                      <p className="text-sm md:text-base text-gray-700 leading-relaxed break-words">
-                        {selectedReport.description}
-                      </p>
-                    )}
-                  </div>
-
-                  {selectedReport.images?.length > 0 && (
-                    <div className="grid grid-cols-2 gap-2 md:gap-4">
-                      {selectedReport.images.map((img, i) => (
-                        <img
-                          key={i}
-                          src={img}
-                          className="h-32 md:h-48 w-full object-cover rounded-lg border border-gray-400"
-                          alt="Evidence"
-                          loading="lazy"
-                        />
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <div className="space-y-4 md:space-y-6">
-                  {selectedReport.location && (
-                    <div className="rounded-xl overflow-hidden border border-gray-400 h-48 md:h-64 relative z-0">
-                      <MapContainer
-                        center={[
-                          Number(selectedReport.location.lat),
-                          Number(selectedReport.location.lng),
-                        ]}
-                        zoom={15}
-                        className="h-full w-full"
-                        scrollWheelZoom={false}
                       >
-                        <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-                        <Marker
-                          position={[
-                            Number(selectedReport.location.lat),
-                            Number(selectedReport.location.lng),
-                          ]}
-                        />
-                      </MapContainer>
+                        <FaThumbsDown />
+                        <span>Down ({selectedReport.downvotes?.length || 0})</span>
+                      </button>
                     </div>
-                  )}
 
-                  <div className="bg-gray-50 rounded-xl p-3 md:p-4 border border-gray-400 flex flex-col h-64 md:h-auto">
-                    <h3 className="font-semibold mb-2 md:mb-4 border-b pb-2 text-sm md:text-base">
-                      Discussion
-                    </h3>
-
-                    <div className="flex-1 overflow-y-auto space-y-3 mb-3 pr-1 custom-scrollbar">
-                      {comments.length > 0 ? (
-                        comments.map(c => (
-                          <div
-                            key={c._id}
-                            className="bg-white p-2 md:p-3 rounded-lg border border-gray-400 text-xs md:text-sm break-words"
-                          >
-                            <div className="font-bold text-xs mb-0.5 text-blue-600">
-                              {c.user?.name || 'Anonymous'}
-                            </div>
-                            <p className="text-gray-700">{c.text}</p>
-                          </div>
-                        ))
-                      ) : (
-                        <div className="h-full flex items-center justify-center">
-                          <p className="text-gray-400 text-xs md:text-sm italic">No comments yet</p>
+                    <div className="bg-gray-50 p-3 rounded-lg border border-gray-400">
+                      {isEditing ? (
+                        <div className="space-y-3">
+                          <label className="mb-2">Edit Description</label>
+                          <textarea
+                            value={editForm.description}
+                            onChange={e =>
+                              setEditForm({ ...editForm, description: e.target.value })
+                            }
+                            className="w-full border-3 border-blue-400 p-2 rounded-lg"
+                            rows={4}
+                          />
                         </div>
+                      ) : (
+                        <p className="text-sm md:text-base text-gray-700 leading-relaxed break-words">
+                          {selectedReport.description}
+                        </p>
                       )}
                     </div>
 
-                    <div className="flex gap-2 w-full items-center">
-                      <input
-                        value={newComment}
-                        onChange={e => setNewComment(e.target.value)}
-                        onKeyPress={e => e.key === 'Enter' && addComment()}
-                        className="flex-1 min-w-0 border border-gray-400 p-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="Type a comment..."
-                      />
-                      <button
-                        onClick={addComment}
-                        className="shrink-0 bg-blue-600 hover:bg-blue-700 text-white px-3 md:px-4 py-2 rounded-lg text-sm font-semibold"
-                      >
-                        Send
-                      </button>
+                    {selectedReport.images?.length > 0 && (
+                      <div className="grid grid-cols-2 gap-2 md:gap-4">
+                        {selectedReport.images.map((img, i) => (
+                          <img
+                            key={i}
+                            src={img}
+                            className="h-32 md:h-48 w-full object-cover rounded-lg border border-gray-400"
+                            alt="Evidence"
+                            loading="lazy"
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="space-y-4 md:space-y-6">
+                    {selectedReport.location && (
+                      <div className="rounded-xl overflow-hidden border border-gray-400 h-48 md:h-64 relative z-0">
+                        <MapContainer
+                          center={[
+                            Number(selectedReport.location.lat),
+                            Number(selectedReport.location.lng),
+                          ]}
+                          zoom={15}
+                          className="h-full w-full"
+                          scrollWheelZoom={false}
+                        >
+                          <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                          <Marker
+                            position={[
+                              Number(selectedReport.location.lat),
+                              Number(selectedReport.location.lng),
+                            ]}
+                          />
+                        </MapContainer>
+                      </div>
+                    )}
+
+                    <div className="bg-gray-50 rounded-xl p-3 md:p-4 border border-gray-400 flex flex-col h-64 md:h-auto">
+                      <h3 className="font-semibold mb-2 md:mb-4 border-b pb-2 text-sm md:text-base">
+                        Discussion
+                      </h3>
+
+                      <div className="flex-1 overflow-y-auto space-y-3 mb-3 pr-1 custom-scrollbar">
+                        {comments.length > 0 ? (
+                          comments.map(c => (
+                            <div
+                              key={c._id}
+                              className="bg-white p-2 md:p-3 rounded-lg border border-gray-400 text-xs md:text-sm break-words"
+                            >
+                              <div className="font-bold text-xs mb-0.5 text-blue-600">
+                                {c.user?.name || 'Anonymous'}
+                              </div>
+                              <p className="text-gray-700">{c.text}</p>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="h-full flex items-center justify-center">
+                            <p className="text-gray-400 text-xs md:text-sm italic">
+                              No comments yet
+                            </p>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex gap-2 w-full items-center">
+                        <input
+                          value={newComment}
+                          onChange={e => setNewComment(e.target.value)}
+                          onKeyPress={e => e.key === 'Enter' && addComment()}
+                          className="flex-1 min-w-0 border border-gray-400 p-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          placeholder="Type a comment..."
+                        />
+                        <button
+                          onClick={addComment}
+                          className="shrink-0 bg-blue-600 hover:bg-blue-700 text-white px-3 md:px-4 py-2 rounded-lg text-sm font-semibold"
+                        >
+                          Send
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
-      <Footer />
-    </div>
+        )}
+        <Footer />
+      </div>
   );
 }

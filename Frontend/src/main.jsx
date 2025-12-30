@@ -9,10 +9,12 @@ import Dashboard from './pages/Dashboard.jsx';
 import ReportIssue from './pages/ReportIssue.jsx';
 import CommunityReports from './pages/CommunityReport.jsx';
 import { Toaster } from "react-hot-toast";
+
 import "./index.css";
 import "leaflet/dist/leaflet.css"
 
 ReactDOM.createRoot(document.getElementById('app')).render(
+
   <React.StrictMode>
     <BrowserRouter>
       <Toaster position="bottom-right" />

@@ -14,7 +14,6 @@ const userSchema = new mongoose.Schema({
     validate: { validator: (v) => validator.isEmail(v), message: "Invalid email" }
   },
   phone: { type: String, default: "" },
-  // store the bcrypt hash here (field name matches your code)
   passwordHash: { type: String, required: true, select: false },
   role: { type: String, default: "User" },
   location: { type: String, default: "" },

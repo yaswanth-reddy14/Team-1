@@ -138,7 +138,7 @@ export default function Register() {
       {/* aurora / bg accents (keeps your previous setup) */}
 
       <AuroraBackground></AuroraBackground>
-      <div className="min-h-screen flex items-center justify-center p-6">
+      <div className="relative min-h-screen flex items-center justify-center p-6">
         <div className="w-full max-w-6xl card p-6 md:p-10 flex flex-col md:flex-row gap-6">
           {/* Main form area */}
           <main className="flex-1 min-w-0 md:pr-6">
