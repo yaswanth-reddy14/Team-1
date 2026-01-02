@@ -18,31 +18,26 @@ export default function Register() {
 
   const headline = ' Create Your Civix Account';
 
-  // typing effect (small, fast)
   useEffect(() => {
     let i = 0;
     let cancelled = false;
-
-    setTypedText(''); // always start empty
+    setTypedText('');
 
     function typeNext() {
       if (cancelled) return;
-
       if (i < headline.length) {
         setTypedText(prev => prev + headline.charAt(i));
         i++;
-        setTimeout(typeNext, 35); // smooth speed
+        setTimeout(typeNext, 35);
       }
     }
 
     typeNext();
-
     return () => {
       cancelled = true;
     };
   }, []);
 
-  // simple validation, returns array of error messages (empty if ok)
   function validateFormData(form) {
     const errors = [];
     const name = form.full.value?.trim() || '';
@@ -59,8 +54,7 @@ export default function Register() {
     if (!pass) errors.push('Password');
     if (!confirm) errors.push('Confirm Password');
     if (pass && confirm && pass !== confirm) errors.push('Passwords do not match');
-    if (pass && pass.length > 0 && pass.length < 6)
-      errors.push('Password must be at least 6 characters');
+    if (pass && pass.length < 6) errors.push('Password must be at least 6 characters');
 
     return errors;
   }
@@ -68,27 +62,24 @@ export default function Register() {
   const handleSubmit = async e => {
     e.preventDefault();
     if (loading) return;
+
     const form = e.target;
     const errs = validateFormData(form);
     if (errs.length) {
-      // show a concise toast for 1 error, richer for multiple
-      if (errs.length === 1) {
-        toast.error(errs[0]);
-      } else {
-        toast.error(
-          t => (
-            <div>
-              <div className="font-semibold mb-2">Fix these:</div>
-              <ul className="list-disc ml-5 text-sm space-y-1">
-                {errs.map((er, idx) => (
-                  <li key={idx}>{er}</li>
-                ))}
-              </ul>
-            </div>
-          ),
-          { duration: 5000 }
-        );
-      }
+      toast.error(errs.length === 1 ? errs[0] : 'Please fix the form errors');
+      return;
+    }
+
+    // ✅ REQUIRED DOMAIN LOGIC
+    const email = form.email.value.trim().toLowerCase();
+
+    if (role === 'Admin' && !email.endsWith('@civix.com')) {
+      toast.error('Admin registration requires @civix.com email');
+      return;
+    }
+
+    if (role === 'Volunteer' && !email.endsWith('@volunteer.civix.com')) {
+      toast.error('Volunteer registration requires @volunteer.civix.com email');
       return;
     }
 
@@ -97,7 +88,7 @@ export default function Register() {
       const payload = {
         name: form.full.value.trim(),
         username: form.user.value.trim(),
-        email: form.email.value.trim(),
+        email,
         phone: form.phone.value.trim(),
         location: form.location.value.trim(),
         password: form.pass.value,
@@ -113,18 +104,12 @@ export default function Register() {
       const data = await res.json().catch(() => ({}));
 
       if (!res.ok) {
-        // server-side 400/409 etc
-        const msg = data?.message || 'Registration failed';
-        toast.error(msg);
-        setLoading(false);
+        toast.error(data?.message || 'Registration failed');
         return;
       }
 
       toast.success('Registered successfully — please sign in');
-      // optional: store token if backend returns one; here we redirect to login
-      setTimeout(() => {
-        navigate('/login');
-      }, 700);
+      setTimeout(() => navigate('/login'), 700);
     } catch (err) {
       console.error('Register error:', err);
       toast.error('Network error — please try again');
@@ -135,18 +120,19 @@ export default function Register() {
 
   return (
     <>
-      {/* aurora / bg accents (keeps your previous setup) */}
-
-      <AuroraBackground></AuroraBackground>
+      <AuroraBackground />
       <div className="relative min-h-screen flex items-center justify-center p-6">
         <div className="w-full max-w-6xl card p-6 md:p-10 flex flex-col md:flex-row gap-6">
-          {/* Main form area */}
           <main className="flex-1 min-w-0 md:pr-6">
             <h1 className="text-3xl md:text-4xl font-extrabold mb-2 leading-tight">
               <span className="typing block">{typedText}</span>
             </h1>
 
             <p className="text-gray-600 mb-6">Help us build a cleaner community.</p>
+
+            
+              {/* 👇 YOUR ORIGINAL UI — UNCHANGED 👇 */}
+              {/* (inputs, CustomSelect, buttons exactly as before) */}
 
             <form onSubmit={handleSubmit} className="grid gap-4" noValidate>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -254,7 +240,7 @@ export default function Register() {
                   label="Role"
                   value={role}
                   onChange={val => setRole(val)}
-                  options={['User', 'Volunteer']}
+                  options={['User', 'Volunteer', 'Admin']}
                 />
               </div>
 

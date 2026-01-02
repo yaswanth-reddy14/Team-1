@@ -17,7 +17,7 @@ const userSchema = new mongoose.Schema({
   passwordHash: { type: String, required: true, select: false },
   role: { type: String, default: "User" },
   location: { type: String, default: "" },
-  image: { type: String, default: "" } // optional: store avatar URL/base64
+  image: { type: String, default: "" } 
 }, { timestamps: true });
 
 export default mongoose.models.User || mongoose.model("User", userSchema);
