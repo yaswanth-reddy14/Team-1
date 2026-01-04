@@ -209,6 +209,11 @@ app.put("/api/auth/update", verifyToken, async (req, res) => {
     if (typeof req.body.name === "string") updates.name = req.body.name.trim();
     if (typeof req.body.phone === "string") updates.phone = req.body.phone.trim();
     if (typeof req.body.location === "string") updates.location = req.body.location.trim();
+    
+    if (req.body.coordinates) {
+       const { lat, lng } = req.body.coordinates;
+       updates.coordinates = { lat, lng };
+    }
 
     if (req.body.hasOwnProperty("image")) {
        updates.image = req.body.image || "";

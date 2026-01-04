@@ -312,6 +312,51 @@ export default function CommunityReports() {
     },
     [selectedReport, userRole]
   );
+
+const handleAcceptIssue = async () => {
+  if (userRole !== 'Volunteer') {
+    toast.error('Only volunteers can accept issues');
+    return;
+  }
+
+  const toastId = toast.loading('Accepting issue...');
+
+  try {
+    const res = await fetch(
+      `${BACKEND}/api/issues/${selectedReport._id}/accept`,
+      {
+        method: 'PATCH',
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+        },
+      }
+    );
+
+    if (!res.ok) {
+      toast.error('Failed to accept issue', { id: toastId });
+      return;
+    }
+
+    const updated = await res.json();
+
+    setSelectedReport(updated.data);
+    setReports(prev =>
+      prev.map(r => (r._id === updated.data._id ? updated.data : r))
+    );
+
+    toast.success('Issue accepted successfully', { id: toastId });
+  } catch (err) {
+    console.error(err);
+    toast.error('Something went wrong', { id: toastId });
+  }
+};
+
+const canAcceptIssue =
+  selectedReport &&
+  userRole === 'Volunteer' &&
+  !selectedReport.assignedTo &&
+  selectedReport.status === 'received';
+
   const handleEditSave = async () => {
     const res = await fetch(`${BACKEND}/api/issues/${selectedReport._id}`, {
       method: 'PUT',
@@ -585,7 +630,7 @@ export default function CommunityReports() {
                         Cancel
                       </button>
                     </>
-                  ) : (
+                  ) : (                    
                     <>
                       {canEdit && (
                         <button
@@ -595,7 +640,20 @@ export default function CommunityReports() {
                           Edit
                         </button>
                       )}
-
+                      
+                     <div className="flex items-center gap-2 shrink-0">
+                        {canAcceptIssue && (
+                            <button
+                              onClick={handleAcceptIssue}
+                              className="px-3 py-1 md:px-4 md:py-1.5 rounded-md
+                             bg-green-400 text-white text-xs md:text-sm font-semibold
+                             hover:bg-green-500 transition"
+                            >
+                              Accept Issue
+                            </button>
+                        )}
+                      </div>
+                      
                       {canDelete && (
                         <button
                           onClick={() => setShowDeleteModal(true)}

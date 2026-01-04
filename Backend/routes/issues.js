@@ -409,6 +409,61 @@ router.delete('/:id', authMiddleware, async (req, res) => {
     });
   }
 });
+/* ===================================================
+   ACCEPT ISSUE (VOLUNTEER ONLY)
+   =================================================== */
+router.patch('/:id/accept', authMiddleware, async (req, res) => {
+  try {
+    // Only volunteers can accept
+    if (req.userRole !== 'Volunteer') {
+      return res.status(403).json({
+        success: false,
+        message: 'Only volunteers can accept issues',
+      });
+    }
+
+    //  Find issue
+    const issue = await Issue.findById(req.params.id);
+    if (!issue) {
+      return res.status(404).json({
+        success: false,
+        message: 'Issue not found',
+      });
+    }
+
+    //  Check if already assigned
+    if (issue.assignedTo) {
+      return res.status(400).json({
+        success: false,
+        message: 'Issue already accepted',
+      });
+    }
+
+    // Assign issue
+    issue.assignedTo = req.userId;
+    issue.status = 'in-progress'; // ✅ MUST MATCH SCHEMA
+    issue.acceptedAt = new Date();
+
+    await issue.save();
+
+    //  Populate and return updated issue
+    const updatedIssue = await Issue.findById(issue._id)
+      .populate('createdBy', '_id name role')
+      .populate('assignedTo', '_id name role');
+
+    res.json({
+      success: true,
+      message: 'Issue accepted successfully',
+      data: updatedIssue,
+    });
+  } catch (error) {
+    console.error('Accept issue error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while accepting issue',
+    });
+  }
+});
 
 
 

@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from "react";
 import Navbar from "../components/Navbar";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
+import VolunteerLocationModal from '../components/volunteerLocationModal';
 import Footer from '../components/Footer';
 /**
  * Profile page
@@ -21,6 +22,9 @@ export default function Profile() {
 
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  // Modal State
+  const [showMapModal, setShowMapModal] = useState(false);
 
   // editing state
   const [editing, setEditing] = useState(false);
@@ -117,6 +121,35 @@ export default function Profile() {
       setForm((s) => ({ ...s, image: dataUrl }));
     };
     reader.readAsDataURL(file);
+  };
+
+// --- SAVE COORDINATES (From Modal) ---
+  const handleSaveCoordinates = async (coords) => {
+    const token = localStorage.getItem("token");
+    try {
+        const res = await fetch(`${BACKEND}/api/auth/update`, {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({ coordinates: coords }), // Send only coordinates
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message || "Failed to update location");
+
+        // Update local user state immediately
+        const updatedUser = { ...user, coordinates: coords };
+        setUser(updatedUser);
+        localStorage.setItem("user", JSON.stringify(updatedUser));
+        
+        toast.success("Exact location updated!");
+        setShowMapModal(false);
+    } catch (err) {
+        console.error(err);
+        toast.error("Failed to update GPS location");
+    }
   };
 
   // Save profile (name/phone/location [+ image prototype])
@@ -511,7 +544,34 @@ setEditing(false);
 
             {/* Right: Security & actions */}
             <div className="bg-white rounded-xl shadow-md p-6">
-              <h3 className="text-2xl font-bold mb-6">Security and Privacy</h3>
+             <h3 className="text-2xl font-bold mb-6">Security and Privacy</h3>
+              {/* ---  THIS BLOCK FOR VOLUNTEER GPS --- */}
+              {user.role === 'Volunteer' && (
+    <div className="bg-blue-50 p-4 rounded-lg mb-4 flex items-center justify-between">
+        <div>
+            <div className="flex items-center gap-2">
+                <h4 className="text-xl font-bold text-gray-800">Volunteer GPS</h4>
+                {user.coordinates && user.coordinates.lat ? (
+                    <span className="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold border border-green-200">
+                        ACTIVE
+                    </span>
+                ) : (
+                    <span className="text-[10px] bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full font-bold border border-yellow-200">
+                        NOT SET
+                    </span>
+                )}
+            </div>
+            <p className="text-gray-600 text-sm ">Used to assign nearby issues.</p>
+        </div>
+
+        <button 
+            onClick={() => setShowMapModal(true)}
+            className="px-4 py-2 bg-blue-600 text-white rounded-full"
+        >
+            {user.coordinates && user.coordinates.lat ? "Update Pin 📍" : "Set Location 📍"}
+        </button>
+    </div>
+)}
 
               <div className="bg-blue-50 p-4 rounded-lg mb-4 flex items-center justify-between">
                 <div>
@@ -608,6 +668,13 @@ setEditing(false);
           </div>
         </div>
         <Footer/>
+        {/* --- MODAL --- */}
+        {showMapModal && (
+            <VolunteerLocationModal 
+                onClose={() => setShowMapModal(false)}
+                onSave={handleSaveCoordinates}
+            />
+        )}
       </div>
     </>
   );

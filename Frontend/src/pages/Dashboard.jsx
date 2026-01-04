@@ -1,4 +1,6 @@
-import React from 'react';
+import React, {useEffect, useState} from 'react';
+import axios from 'axios';
+import { toast } from 'react-hot-toast';
 import {
   FaExclamationCircle,
   FaCheckCircle,
@@ -7,7 +9,7 @@ import {
   FaListUl,
   FaMapMarkedAlt,
 } from 'react-icons/fa';
-
+import VolunteerLocationModal from '../components/volunteerLocationModal';
 import AuroraBackground from '../components/AuroraBackground';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
@@ -35,6 +37,49 @@ const recentActivity = [
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const [showVolunteerLocationModal, setShowVolunteerLocationModal] = useState(false);
+
+  const BACKEND = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+        const res = await axios.get(`${BACKEND}/api/auth/me`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        const user = res.data.user;
+        if (user.role === 'Volunteer') {
+          if (!user.coordinates || !user.coordinates.lat) {
+          setShowVolunteerLocationModal(true);
+          }
+        }
+      }
+      catch (err) {
+        console.error('Error fetching user data:', err);
+      }
+    };
+
+    fetchUserData();
+  }, [BACKEND]);
+  const handleSaveLocation = async (coords) => {
+    try {
+      const token = localStorage.getItem('token');
+      await axios.put(
+        `${BACKEND}/api/auth/update`, 
+        { coordinates: coords }, 
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      toast.success("Location updated successfully!");
+      setShowVolunteerLocationModal(false); 
+    } catch (err) {
+      console.error("Failed to save location", err);
+      toast.error("Failed to save location.");
+    }
+  };
+
   return (
     <>
       <AuroraBackground />
@@ -122,6 +167,12 @@ export default function Dashboard() {
 
         <Footer />
       </div>
+     {showVolunteerLocationModal && (
+        <VolunteerLocationModal
+          onClose={() => setShowVolunteerLocationModal(false)}
+          onSave={handleSaveLocation} 
+        />
+      )}
     </>
   );
 }
